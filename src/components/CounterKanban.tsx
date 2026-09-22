@@ -1,5 +1,6 @@
 import React from 'react';
-import { UserRole, PaymentStatus } from '../types';
+import { PaymentStatus } from '../types';
+import { StaffRole } from '../types/auth';
 import { ToastType } from './Toast';
 
 export interface CounterTask {
@@ -15,7 +16,7 @@ export interface CounterTask {
 
 interface CounterKanbanProps {
   tasks: CounterTask[];
-  currentUserRole: UserRole;
+  currentUserRole: StaffRole;
   onStatusChange: (id: string, newStatus: PaymentStatus) => void;
   onCardClick?: (task: CounterTask) => void;
   onShowToast: (message: string, type: ToastType) => void;
@@ -25,6 +26,7 @@ interface CounterKanbanProps {
 
 const CounterKanban: React.FC<CounterKanbanProps> = ({
   tasks,
+  currentUserRole,
   onStatusChange,
   onCardClick,
   onShowToast,

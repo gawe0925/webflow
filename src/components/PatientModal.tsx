@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PatientTask, UserRole, COMMON_REJECT_REASONS, StatusHistory, PackItem } from '../types';
+import { PatientTask, COMMON_REJECT_REASONS, StatusHistory, PackItem } from '../types';
+import { StaffRole } from '../types/auth';
 import { uploadTaskImage } from '../services/patientService';
 import {
   X, Clock, User, FileText, AlertCircle, Save, Trash2, Plus, Edit3,
@@ -12,7 +13,7 @@ interface PatientModalProps {
   task: PatientTask | null;
   isOpen: boolean;
   onClose: () => void;
-  currentUserRole: UserRole;
+  currentUserRole: StaffRole;
   onUpdateTask: (taskId: string, updates: Partial<PatientTask>) => void;
   onDeleteTask: (taskId: string) => void;
   statusHistory: StatusHistory[];
@@ -456,7 +457,7 @@ export default function PatientModal({
 
                     <div className="flex items-center gap-3">
                       {pack.isCompleted && pack.completedBy && (
-                        <span className="text-[11px] text-zinc-700 bg-zinc-200/70 border border-zinc-300/60 px-2 py-0.5 rounded-full font-medium">
+                        <span className="text-[11px] text-zinc-700 bg-zinc-200/70 border border-zinc-300/60 px-2 py-0.5 rounded-full font-medium capitalize">
                           Done by {pack.completedBy}
                         </span>
                       )}
@@ -490,7 +491,7 @@ export default function PatientModal({
                   <div className="flex items-center gap-2 text-zinc-400">
                     <span className="font-mono text-[11px]">{formatTime(history.timestamp)}</span>
                     <span>•</span>
-                    <span>by {history.updatedBy}</span>
+                    <span className="capitalize">by {history.updatedBy}</span>
                   </div>
                 </div>
               ))}
@@ -583,7 +584,7 @@ export default function PatientModal({
             </div>
           )}
 
-          {/* 📌 重大改版：Attachments 圖片上傳區 */}
+          {/* 📌 Attachments 圖片上傳區 */}
           <div>
             <h3 className="text-sm font-semibold text-zinc-900 mb-2.5 flex items-center gap-2">
               <ImageIcon className="w-4 h-4 text-zinc-500" />
@@ -661,7 +662,7 @@ export default function PatientModal({
                 <CheckCircle className="w-4 h-4 text-zinc-700" />
                 <span className="font-semibold text-xs">Clinical Sign-off Completed</span>
               </div>
-              <p className="text-xs text-zinc-500 mt-1 font-medium">
+              <p className="text-xs text-zinc-500 mt-1 font-medium capitalize">
                 Verified by {task.checkedBy} at {formatTime(task.checkedAt)}
               </p>
             </div>
@@ -670,7 +671,7 @@ export default function PatientModal({
           {/* Last Updated Info */}
           <div className="flex items-center gap-1.5 text-xs text-zinc-400 pt-3 border-t border-zinc-100">
             <User className="w-3.5 h-3.5" />
-            <span>Last updated by {task.lastUpdatedBy} at {formatTime(task.lastUpdatedTime)}</span>
+            <span className="capitalize">Last updated by {task.lastUpdatedBy} at {formatTime(task.lastUpdatedTime)}</span>
           </div>
         </div>
 
@@ -704,7 +705,7 @@ export default function PatientModal({
 
       </div>
 
-      {/* 📌 QR Code 彈出視窗 (預留方案 B 手機拍照上傳入口) */}
+      {/* 📌 QR Code 彈出視窗 */}
       {showQrModal && (
         <div className="fixed inset-0 bg-black/60 z-[100000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 border border-zinc-200 shadow-2xl">
@@ -716,7 +717,6 @@ export default function PatientModal({
             </div>
             <p className="text-xs text-zinc-500">Scan this code with your phone camera to quickly take and upload a photo for patient <strong className="text-zinc-800">{task.patientCode}</strong>.</p>
 
-            {/* 這裡使用免費公用 API 產生 QR Code 圖片 */}
             <div className="flex justify-center p-3 bg-zinc-50 rounded-xl border border-zinc-100">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mobileUploadUrl)}`}

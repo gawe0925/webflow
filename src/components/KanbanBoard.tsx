@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { PatientTask, UserRole, WebsterPakStatus, ROLE_PERMISSIONS } from '../types';
+import { PatientTask, WebsterPakStatus, ROLE_PERMISSIONS } from '../types';
+import { StaffRole } from '../types/auth';
 import TaskCard from './TaskCard';
 
 interface KanbanBoardProps {
   tasks: PatientTask[];
-  currentUserRole: UserRole;
+  currentUserRole: StaffRole;
   onStatusChange: (id: string, newStatus: WebsterPakStatus | string, verificationData?: any) => void;
   onCardClick: (task: PatientTask) => void;
   onShowToast: (message: string, type: 'error' | 'success' | 'info') => void;
@@ -40,7 +41,8 @@ export default function KanbanBoard({
     setColumns(updatedColumns);
   }, [tasks, availableColumns]);
 
-  const permissions = ROLE_PERMISSIONS[currentUserRole];
+  // 如果 ROLE_PERMISSIONS 中有對應 key，取對應權限，否則提供預設值
+  const permissions = ROLE_PERMISSIONS[currentUserRole as keyof typeof ROLE_PERMISSIONS] || { canSignOffReady: false };
 
   const visibleColumns = availableColumns.filter(status => visibleStatuses.includes(status));
 

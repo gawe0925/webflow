@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { PatientTask, WebsterPakStatus, UserRole } from '../types';
+import { PatientTask, WebsterPakStatus } from '../types';
+import { StaffRole } from '../types/auth';
 import { 
   Clock, User, FileText, AlertCircle, Package, CheckCircle2, Send, 
   CreditCard, DollarSign, Receipt, Image as ImageIcon 
@@ -8,7 +9,7 @@ import { ToastType } from './Toast';
 
 interface TaskCardProps {
   task: PatientTask;
-  currentUserRole?: UserRole;
+  currentUserRole?: StaffRole;
   isSelected?: boolean;
   disabledSelection?: boolean;
   selectionDisabledTooltip?: string;

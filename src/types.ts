@@ -1,4 +1,4 @@
-export type UserRole = 'pharmacist' | 'manager' | 'staff';
+export type StaffRole = 'admin' | 'manager' | 'dispenser' | 'retail assistant' | 'pharmacist';
 
 export type DispensaryStatus =
   | 'TODO'
@@ -104,20 +104,56 @@ export const COMMON_REJECT_REASONS = [
   'Other'
 ];
 
-export const ROLE_PERMISSIONS = {
+export interface PermissionConfig {
+  canViewAll: boolean;
+  canDragToClinical: boolean;
+  canSignOffReady: boolean;
+  canManageStaff: boolean; // 是否能管理員工帳號（看得到 Header 的員工管理按鈕）
+
+  // 📌 新增看板存取權限
+  canAccessDispensary: boolean; // 是否可存取/檢視配藥區看板 (Dispensary Station)
+  canAccessCounter: boolean;    // 是否可存取/檢視收銀櫃檯看板 (Checkout Counter)
+}
+
+export const ROLE_PERMISSIONS: Record<StaffRole, PermissionConfig> = {
   pharmacist: {
     canViewAll: true,
     canDragToClinical: true,
     canSignOffReady: true,
+    canManageStaff: true,
+    canAccessDispensary: true,
+    canAccessCounter: true,
   },
   manager: {
     canViewAll: true,
     canDragToClinical: true,
-    canSignOffReady: false,
+    canSignOffReady: true,
+    canManageStaff: true,
+    canAccessDispensary: true,
+    canAccessCounter: true,
   },
-  staff: {
+  dispenser: {
+    canViewAll: true,
+    canDragToClinical: false,
+    canSignOffReady: false,
+    canManageStaff: false,
+    canAccessDispensary: true,
+    canAccessCounter: true,
+  },
+  'retail assistant': {
     canViewAll: false,
     canDragToClinical: false,
     canSignOffReady: false,
-  }
+    canManageStaff: false,
+    canAccessDispensary: false, // 👈 零售/門市助理看不到調劑區
+    canAccessCounter: true,
+  },
+  admin: {
+    canViewAll: true,
+    canDragToClinical: true,
+    canSignOffReady: true,
+    canManageStaff: true,
+    canAccessDispensary: true,
+    canAccessCounter: true,
+  },
 };

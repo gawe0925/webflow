@@ -1,11 +1,12 @@
 import React from 'react';
-import { PatientTask, DispensaryStatus, UserRole } from '../types';
+import { PatientTask, DispensaryStatus } from '../types';
+import { StaffRole } from '../types/auth';
 import TaskCard from './TaskCard';
 import { ToastType } from './Toast';
 
 interface DispensaryKanbanProps {
   tasks: PatientTask[];
-  currentUserRole: UserRole;
+  currentUserRole: StaffRole;
   selectedTaskIds?: string[];
   selectedTaskStatus?: DispensaryStatus | null;
   onToggleSelectTask?: (taskId: string) => void;
@@ -44,7 +45,10 @@ export default function DispensaryKanban({
     const taskId = e.dataTransfer.getData('text/plain');
     if (!taskId) return;
 
-    if (targetStatus === 'Rejected' && currentUserRole !== 'pharmacist') {
+    // 權限檢查：只有 Pharmacist (或更高層級如 Manager/Admin) 才可以拒絕任務
+    const canReject = ['pharmacist', 'manager', 'admin'].includes(currentUserRole);
+
+    if (targetStatus === 'Rejected' && !canReject) {
       onShowToast('Only pharmacists have permission to reject tasks.', 'error');
       return;
     }

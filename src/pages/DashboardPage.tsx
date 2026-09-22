@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { StaffRole } from '../types/auth';
+import { ROLE_PERMISSIONS } from '../types'
 import {
-  UserRole,
   PatientTask,
   WebsterPakStatus,
   DispensaryStatus,
@@ -20,7 +21,9 @@ import {
   updatePaymentStatusInService
 } from '../services/patientService';
 
-import RoleSwitcher from '../components/RoleSwitcher';
+// 引入全頁 Layout (已包含 Header)
+import MainLayout from '../components/layouts/MainLayout';
+
 import DispensaryKanban from '../components/DispensaryKanban';
 import CounterKanban, { CounterTask } from '../components/CounterKanban';
 import PatientModal from '../components/PatientModal';
@@ -29,6 +32,7 @@ import Toast, { ToastType } from '../components/Toast';
 import AIAssistantModal from '../components/AIAssistantModal';
 import { Plus, Search, Filter, X, Store, CreditCard, CheckSquare, ArrowRight } from 'lucide-react';
 import { isFirebaseInitialized } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 
 const PAYMENT_COLUMNS: PaymentStatus[] = ['Unpaid', 'Paid'];
 
@@ -64,7 +68,21 @@ const generateMockTasks = (): PatientTask[] => [
 ];
 
 export default function DashboardPage() {
-  const [currentUserRole, setCurrentUserRole] = useState<UserRole>('pharmacist');
+  // 從 AuthContext 取出當前登入員工資訊
+  const { currentStaff, hasRole } = useAuth();
+
+  // 將登入員工角色自動同步至看板權限（系統最高權限 mapping）
+  const currentUserRole: StaffRole = (currentStaff?.role === 'admin' ? 'pharmacist' : currentStaff?.role) as StaffRole || 'retail assistant';
+
+  // 📌 從權限對照表中取得目前使用者的看板權限
+  const userPermissions = ROLE_PERMISSIONS[currentUserRole] || {
+    canAccessDispensary: false,
+    canAccessCounter: true
+  };
+
+  const showDispensary = userPermissions.canAccessDispensary;
+  const showCounter = userPermissions.canAccessCounter;
+
   const [tasks, setTasks] = useState<PatientTask[]>([]);
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
 
@@ -144,10 +162,6 @@ export default function DashboardPage() {
       setUseLocalFallback(true);
     }
   }, []);
-
-  const handleRoleChange = (role: UserRole) => {
-    setCurrentUserRole(role);
-  };
 
   const handleToggleSelectTask = (taskId: string) => {
     const targetTask = tasks.find(t => t.id === taskId);
@@ -346,8 +360,7 @@ export default function DashboardPage() {
     await handleUpdateTask(taskId, { patientCode: newCode });
   };
 
-  const canManagePatients = currentUserRole === 'pharmacist' || currentUserRole === 'manager';
-  const isCounterOnly = currentUserRole === 'staff';
+  const canManagePatients = currentUserRole === 'pharmacist' || currentUserRole === 'manager' || currentUserRole === 'admin';
 
   const handleShowToast = (message: string, type: ToastType) => {
     setToast({ message, type });
@@ -371,34 +384,13 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col bg-slate-50 text-slate-800 font-sans antialiased">
-      {/* Navigation Header */}
-      <header className="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm z-30">
-        <div className="max-w-[1920px] mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">WebFlow</h1>
-                <p className="text-[11px] font-medium text-slate-500">Webster-pak® Workflow Solutions</p>
-              </div>
-              {useLocalFallback && (
-                <span className="ml-3 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
-                  Offline Mode
-                </span>
-              )}
-            </div>
-            <RoleSwitcher currentRole={currentUserRole} onRoleChange={handleRoleChange} />
-          </div>
-        </div>
-      </header>
+    <MainLayout useLocalFallback={useLocalFallback}>
+      <div className="h-full max-w-[1920px] w-full mx-auto px-6 py-3.5 flex flex-col gap-3 overflow-y-auto">
 
-      {/* Main Content Area */}
-      <main className="flex-1 min-h-0 max-w-[1920px] w-full mx-auto px-6 py-3.5 flex flex-col gap-3 overflow-y-auto">
-        
         {/* AI Smart Operations Assistant */}
-        <AIAssistantModal 
-          tasks={tasks} 
-          paymentRecords={paymentRecords} 
+        <AIAssistantModal
+          tasks={tasks}
+          paymentRecords={paymentRecords}
         />
 
         {/* Toolbar */}
@@ -436,10 +428,11 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
                 Total Patients: <span className="text-slate-900 font-bold text-sm ml-1">{tasks.length}</span>
               </div>
+
               {canManagePatients && (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
@@ -546,17 +539,91 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Board Main Area */}
-        {!isCounterOnly ? (
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-            {/* Dispensary Station Board */}
-            <section className="lg:col-span-8 flex flex-col min-h-0 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex-shrink-0 flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-slate-100 text-slate-700 rounded-lg">
-                    <Store className="w-4 h-4" />
+        {/* Board Main Area - 依據權限彈性切換版面 */}
+        <div className="flex-1 min-h-0">
+          {showDispensary && showCounter ? (
+            /* 1. 調劑區與櫃檯皆可看見（雙欄模式） */
+            <div className="h-full grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+              <section className="lg:col-span-8 flex flex-col min-h-0 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex-shrink-0 flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-slate-100 text-slate-700 rounded-lg">
+                      <Store className="w-4 h-4" />
+                    </div>
+                    <h1 className="text-sm font-bold text-slate-900">Dispensary Station</h1>
                   </div>
-                  <h1 className="text-sm font-bold text-slate-900">Dispensary Station</h1>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <DispensaryKanban
+                    tasks={tasks}
+                    currentUserRole={currentUserRole}
+                    selectedTaskIds={selectedTaskIds}
+                    selectedTaskStatus={selectedTaskStatus}
+                    onToggleSelectTask={handleToggleSelectTask}
+                    onStatusChange={handleStatusChange}
+                    onCardClick={handleCardClick}
+                    onUpdateRejectReason={(taskId, reason) => handleUpdateTask(taskId, { rejectReason: reason })}
+                    onShowToast={handleShowToast}
+                    searchQuery={searchQuery}
+                    visibleStatuses={visibleStatuses}
+                  />
+                </div>
+              </section>
+
+              <section className="lg:col-span-4 flex flex-col min-h-0 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex-shrink-0 flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-slate-100 text-slate-700 rounded-lg">
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <h1 className="text-sm font-bold text-slate-900">Checkout Counter</h1>
+                  </div>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <CounterKanban
+                    tasks={counterTasksForKanban}
+                    currentUserRole={currentUserRole}
+                    onStatusChange={(id: string, newStatus: PaymentStatus) => handlePaymentStatusChange(id, newStatus)}
+                    onShowToast={handleShowToast}
+                    searchQuery={searchQuery}
+                    visibleStatuses={PAYMENT_COLUMNS}
+                  />
+                </div>
+              </section>
+            </div>
+          ) : showCounter ? (
+            /* 2. 僅可看見櫃檯（單欄收銀模式） */
+            <section className="h-full max-w-5xl w-full mx-auto flex flex-col bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex-shrink-0 flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
+                <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Retail Checkout Counter</h2>
+                  <p className="text-xs text-slate-500">Patient collections and payment completion status</p>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0">
+                <CounterKanban
+                  tasks={counterTasksForKanban}
+                  currentUserRole={currentUserRole}
+                  onStatusChange={(id: string, newStatus: PaymentStatus) => handlePaymentStatusChange(id, newStatus)}
+                  onShowToast={handleShowToast}
+                  searchQuery={searchQuery}
+                  visibleStatuses={PAYMENT_COLUMNS}
+                />
+              </div>
+            </section>
+          ) : showDispensary ? (
+            /* 3. 僅可看見調劑區（單欄配藥模式） */
+            <section className="h-full w-full flex flex-col bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex-shrink-0 flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
+                <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Dispensary Station</h2>
+                  <p className="text-xs text-slate-500">Prescription packing and clinical verification status</p>
                 </div>
               </div>
               <div className="flex-1 min-h-0">
@@ -575,83 +642,44 @@ export default function DashboardPage() {
                 />
               </div>
             </section>
+          ) : (
+            /* 4. 無權限時顯示提示 */
+            <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+              No station permissions granted for this role.
+            </div>
+          )}
+        </div>
 
-            {/* Front Counter Board */}
-            <section className="lg:col-span-4 flex flex-col min-h-0 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex-shrink-0 flex items-center justify-between mb-2.5 pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-slate-100 text-slate-700 rounded-lg">
-                    <CreditCard className="w-4 h-4" />
-                  </div>
-                  <h1 className="text-sm font-bold text-slate-900">Checkout Counter</h1>
-                </div>
-              </div>
-              <div className="flex-1 min-h-0">
-                <CounterKanban
-                  tasks={counterTasksForKanban}
-                  currentUserRole={currentUserRole}
-                  onStatusChange={(id: string, newStatus: PaymentStatus) => handlePaymentStatusChange(id, newStatus)}
-                  onShowToast={handleShowToast}
-                  searchQuery={searchQuery}
-                  visibleStatuses={PAYMENT_COLUMNS}
-                />
-              </div>
-            </section>
-          </div>
-        ) : (
-          <section className="flex-1 min-h-0 max-w-5xl w-full mx-auto flex flex-col bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex-shrink-0 flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
-              <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
-                <CreditCard className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Retail Checkout Counter</h2>
-                <p className="text-xs text-slate-500">Patient collections and payment completion status</p>
-              </div>
-            </div>
-            <div className="flex-1 min-h-0">
-              <CounterKanban
-                tasks={counterTasksForKanban}
-                currentUserRole={currentUserRole}
-                onStatusChange={(id: string, newStatus: PaymentStatus) => handlePaymentStatusChange(id, newStatus)}
-                onShowToast={handleShowToast}
-                searchQuery={searchQuery}
-                visibleStatuses={PAYMENT_COLUMNS}
-              />
-            </div>
-          </section>
+        {/* Patient Detail Modal */}
+        {selectedTask && (
+          <PatientModal
+            task={selectedTask}
+            isOpen={!!selectedTaskId}
+            onClose={() => setSelectedTaskId(null)}
+            currentUserRole={currentUserRole}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+            statusHistory={selectedTaskId ? statusHistory[selectedTaskId] || [] : []}
+            onUpdatePatientCode={handleUpdatePatientCode}
+          />
         )}
-      </main>
 
-      {/* Patient Detail Modal */}
-      {selectedTask && (
-        <PatientModal
-          task={selectedTask}
-          isOpen={!!selectedTaskId}
-          onClose={() => setSelectedTaskId(null)}
-          currentUserRole={currentUserRole}
-          onUpdateTask={handleUpdateTask}
-          onDeleteTask={handleDeleteTask}
-          statusHistory={selectedTaskId ? statusHistory[selectedTaskId] || [] : []}
-          onUpdatePatientCode={handleUpdatePatientCode}
+        {/* Add Patient Modal */}
+        <AddPatientModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAddPatient={handleAddPatient}
         />
-      )}
 
-      {/* Add Patient Modal */}
-      <AddPatientModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddPatient={handleAddPatient}
-      />
-
-      {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-    </div>
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
+    </MainLayout>
   );
 }
