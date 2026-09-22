@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { collection, onSnapshot } from 'firebase/firestore'; // 1. 引入 Firestore 監聽函式
+import { db } from '../firebase'; // 2. 引入 db 實例 (請確認你的 firebase 引入路徑)
 import { PatientTask, UserRole, WebsterPakStatus, ROLE_PERMISSIONS } from '../types';
 import TaskCard from './TaskCard';
 
@@ -24,6 +26,41 @@ export default function KanbanBoard({
   visibleStatuses,
   availableColumns
 }: KanbanBoardProps) {
+  // ---------------------------------------------------------------------------
+  // 🔍 專屬除錯與監聽 patients Collection
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    console.log("🔥 Active Firebase Project ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID);
+    console.log("🚀 [KanbanBoard] Subscribing to 'patients' collection...");
+
+    const patientsRef = collection(db, "patients");
+
+    const unsubscribe = onSnapshot(
+      patientsRef,
+      (snapshot) => {
+        console.log(`📦 [patients] Snapshot received! Total docs count: ${snapshot.docs.length}`);
+        if (snapshot.empty) {
+          console.warn("⚠️ [patients] Collection is empty! Check Firestore Console or check if Project ID matches.");
+        } else {
+          const rawDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          console.log("✅ [patients] Raw Firestore Data Sample (First Item):", rawDocs[0]);
+        }
+      },
+      (error) => {
+        console.error("❌ [patients] Firestore Subscription Error:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // 🔍 監控父層傳進來的 props.tasks 變化
+  useEffect(() => {
+    console.log("📊 [KanbanBoard] Props 'tasks' updated. Count:", tasks.length);
+    console.log("🏷️ [KanbanBoard] Available Columns:", availableColumns);
+  }, [tasks, availableColumns]);
+  // ---------------------------------------------------------------------------
+
   const [columns, setColumns] = useState<Record<string, PatientTask[]>>(() => {
     return availableColumns.reduce((acc, status) => {
       acc[status] = tasks.filter(task => (task.currentStatus || (task as any).paymentStatus) === status);
