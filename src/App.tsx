@@ -26,6 +26,7 @@ import CounterKanban, { CounterTask } from './components/CounterKanban';
 import PatientModal from './components/PatientModal';
 import AddPatientModal from './components/AddPatientModal';
 import Toast, { ToastType } from './components/Toast';
+import AIAssistantModal from './components/AIAssistantModal'; // 📌 1. 引入 AI 模組
 import { Plus, Search, Filter, X, Store, CreditCard, Sparkles, CheckSquare, ArrowRight } from 'lucide-react';
 import { isFirebaseInitialized } from './firebase';
 
@@ -69,7 +70,7 @@ export default function App() {
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  // 📌 批量選取狀態與下拉選單選擇之目標狀態
+  // 批量選取狀態與下拉選單選擇之目標狀態
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [batchTargetStatus, setBatchTargetStatus] = useState<DispensaryStatus | ''>('');
 
@@ -95,17 +96,17 @@ export default function App() {
 
   const isAllColumnSelected = sameStatusTasksInColumn.length > 0 && sameStatusTasksInColumn.every(t => selectedTaskIds.includes(t.id));
 
-  // 📌 全選當前欄位中的所有 Tasks
+  // 全選當前欄位中的所有 Tasks
   const handleSelectAllInColumn = () => {
     if (!selectedTaskStatus) return;
     const allIdsInCol = sameStatusTasksInColumn.map(t => t.id);
     setSelectedTaskIds(allIdsInCol);
   };
 
-  // 📌 可轉移的目標狀態列表（排除自身狀態，且防呆控制 Pharmacist 專屬權限）
+  // 可轉移的目標狀態列表（排除自身狀態，且防呆控制 Pharmacist 專屬權限）
   const availableTargetStatuses = DISPENSARY_COLUMNS.filter(status => {
-    if (status === selectedTaskStatus) return false; // 排除自身狀態
-    if (status === 'Rejected' && currentUserRole !== 'pharmacist') return false; // 僅藥師可駁回
+    if (status === selectedTaskStatus) return false;
+    if (status === 'Rejected' && currentUserRole !== 'pharmacist') return false;
     return true;
   });
 
@@ -168,7 +169,7 @@ export default function App() {
     setBatchTargetStatus('');
   };
 
-  // 📌 執行批量更新
+  // 執行批量更新
   const handleExecuteBatchUpdate = async () => {
     if (!batchTargetStatus) {
       handleShowToast('Please select a target status first.', 'error');
@@ -276,7 +277,6 @@ export default function App() {
       if (useLocalFallback && targetTask) {
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...taskUpdates } : t));
 
-        // 本地/離線模式下的 Payment Record 立即同步
         if (targetTask.currentStatus === 'Collected' && typeof updates.isAccountPayment === 'boolean') {
           if (updates.isAccountPayment && targetTask.paymentRecordId) {
             setPaymentRecords(prev => prev.filter(p => p.id !== targetTask.paymentRecordId));
@@ -377,9 +377,6 @@ export default function App() {
         <div className="max-w-[1920px] mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-800 text-white rounded-xl shadow-sm">
-                <Sparkles className="w-5 h-5" />
-              </div>
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-slate-900">WebFlow</h1>
                 <p className="text-[11px] font-medium text-slate-500">Webster-pak® Workflow Solutions</p>
@@ -396,7 +393,14 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-h-0 max-w-[1920px] w-full mx-auto px-6 py-3.5 flex flex-col gap-3">
+      <main className="flex-1 min-h-0 max-w-[1920px] w-full mx-auto px-6 py-3.5 flex flex-col gap-3 overflow-y-auto">
+        
+        {/* 📌 2. 插入 AI Smart Operations Assistant 區塊 (位在工具列與看板上方) */}
+        <AIAssistantModal 
+          tasks={tasks} 
+          paymentRecords={paymentRecords} 
+        />
+
         {/* Toolbar */}
         <div className="flex-shrink-0 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-3">
           <div className="flex items-center justify-between gap-4">
@@ -407,7 +411,7 @@ export default function App() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value.trim().toUpperCase())}
-                  placeholder="Search patient code (e.g., M22)..."
+                  placeholder="Search patient code"
                   className="w-full pl-10 pr-9 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:bg-white transition-all"
                 />
                 {searchQuery && (
@@ -496,7 +500,6 @@ export default function App() {
                 {selectedTaskIds.length} Selected ({selectedTaskStatus})
               </span>
 
-              {/* 全選當前欄位按鈕 */}
               {!isAllColumnSelected && (
                 <button
                   onClick={handleSelectAllInColumn}
@@ -506,7 +509,6 @@ export default function App() {
                 </button>
               )}
 
-              {/* 取消全選按鈕 */}
               <button
                 onClick={handleClearSelection}
                 className="text-xs text-white/80 hover:text-white underline font-medium cursor-pointer"
@@ -515,7 +517,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* 下拉選單 + 防呆 Confirm 按鈕 */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-white/90">Batch Move to:</span>
 
