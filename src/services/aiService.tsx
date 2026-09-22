@@ -93,7 +93,7 @@ Instructions:
                 contents: prompt
             });
 
-            return response.text || 'Unable to retrieve response from AI.';
+            return response.text || "I was unable to find specific details matching your question in the current dispensary data.";
         }
 
         // Mode B: Default Full Operational Analysis Mode (Returns Structured JSON)

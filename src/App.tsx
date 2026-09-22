@@ -27,7 +27,7 @@ import PatientModal from './components/PatientModal';
 import AddPatientModal from './components/AddPatientModal';
 import Toast, { ToastType } from './components/Toast';
 import AIAssistantModal from './components/AIAssistantModal'; // 📌 1. 引入 AI 模組
-import { Plus, Search, Filter, X, Store, CreditCard, Sparkles, CheckSquare, ArrowRight } from 'lucide-react';
+import { Plus, Search, Filter, X, Store, CreditCard, CheckSquare, ArrowRight } from 'lucide-react';
 import { isFirebaseInitialized } from './firebase';
 
 const PAYMENT_COLUMNS: PaymentStatus[] = ['Unpaid', 'Paid'];

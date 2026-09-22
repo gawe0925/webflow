@@ -37,14 +37,27 @@ export default function AIAssistantModal({ tasks, paymentRecords }: Props) {
 
         try {
             const responseText = await analyzeDispensaryData(tasks, paymentRecords as any, userQuery);
-            setMessages(prev => [...prev, { sender: 'ai', text: responseText }]);
+
+            // 確保回傳內容不為空
+            if (responseText) {
+                setMessages(prev => [...prev, { sender: 'ai', text: responseText }]);
+            } else {
+                setMessages(prev => [
+                    ...prev,
+                    {
+                        sender: 'ai',
+                        text: "Sorry, I couldn't find any relevant data or answer for that query. Please try asking in a different way or check your search terms."
+                    }
+                ]);
+            }
         } catch (err) {
             console.error(err);
+            // 真正的系統/網路例外時的友善提示
             setMessages(prev => [
                 ...prev,
                 {
                     sender: 'ai',
-                    text: '⚠️ Query failed. Please verify your Gemini API Key configuration and try again.'
+                    text: "I'm having trouble connecting right now. Please try your question again in a moment."
                 }
             ]);
         } finally {
