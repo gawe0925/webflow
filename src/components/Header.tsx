@@ -43,7 +43,6 @@ export default function Header({ useLocalFallback = false, onOpenStaffManagement
           icon: <UserCheck className="w-3.5 h-3.5 text-blue-600" />
         };
       case 'retail assistant':
-      case 'retail assistant':
       case 'staff':
       default:
         return {
