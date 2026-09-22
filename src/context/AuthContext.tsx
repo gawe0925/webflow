@@ -118,7 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loginStaff = async (staffCode: string, pin: string): Promise<boolean> => {
         const matchedStaff = staffList.find(
             (s) =>
-                s.active &&
                 s.staffCode.toLowerCase() === staffCode.trim().toLowerCase() &&
                 String(s.pin ?? '').trim() === pin.trim()
         );

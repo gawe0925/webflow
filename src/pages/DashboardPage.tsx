@@ -69,7 +69,7 @@ const generateMockTasks = (): PatientTask[] => [
 
 export default function DashboardPage() {
   // 從 AuthContext 取出當前登入員工資訊
-  const { currentStaff, hasRole } = useAuth();
+  const { currentStaff } = useAuth();
 
   // 將登入員工角色自動同步至看板權限（系統最高權限 mapping）
   const currentUserRole: StaffRole = (currentStaff?.role === 'admin' ? 'pharmacist' : currentStaff?.role) as StaffRole || 'retail assistant';

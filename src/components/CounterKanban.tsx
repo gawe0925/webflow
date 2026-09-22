@@ -26,7 +26,6 @@ interface CounterKanbanProps {
 
 const CounterKanban: React.FC<CounterKanbanProps> = ({
   tasks,
-  currentUserRole,
   onStatusChange,
   onCardClick,
   onShowToast,
