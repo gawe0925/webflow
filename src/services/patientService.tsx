@@ -129,7 +129,7 @@ export const subscribeToPaymentRecords = (
 export const updatePatientStatusInService = async (
   targetTask: PatientTask,
   newStatus: DispensaryStatus,
-  currentUserRole: string,
+  currentStaffName: string,
   verificationData?: { checkedBy: string; checkedAt: string },
   isLocalFallback = false
 ): Promise<{ updatedTask: ExtendedPatientTaskUpdates; newPaymentRecordId: string | null }> => {
@@ -165,7 +165,7 @@ export const updatePatientStatusInService = async (
   const updates: ExtendedPatientTaskUpdates = {
     currentStatus: newStatus,
     lastUpdatedTime: new Date().toISOString(),
-    lastUpdatedBy: currentUserRole,
+    lastUpdatedBy: currentStaffName,
     paymentRecordId: newPaymentRecordId
   };
 
@@ -193,7 +193,7 @@ export const updatePatientStatusInService = async (
 export const updatePatientInService = async (
   taskId: string,
   updates: Partial<PatientTask>,
-  currentUserRole: string,
+  currentStaffName: string,
   isLocalFallback = false,
   currentTask?: PatientTask // 📌 傳入當前 Task 用於判斷狀態與連動 paymentRecord
 ) => {
@@ -229,7 +229,7 @@ export const updatePatientInService = async (
     ...updates,
     ...(updatedPaymentRecordId !== undefined ? { paymentRecordId: updatedPaymentRecordId } : {}),
     lastUpdatedTime: new Date().toISOString(),
-    lastUpdatedBy: currentUserRole
+    lastUpdatedBy: currentStaffName
   };
 
   if (!isLocalFallback && isFirebaseInitialized()) {
@@ -241,14 +241,14 @@ export const updatePatientInService = async (
 // 7. 新增 Patient
 export const addPatientToService = async (
   formData: PatientFormData & { initialStatus?: string },
-  currentUserRole: string,
+  currentStaffName: string,
   isLocalFallback = false
 ): Promise<PatientTask> => {
   const newTaskData = {
     patientCode: formData.patientCode,
     currentStatus: (formData.initialStatus || 'TODO') as DispensaryStatus,
     lastUpdatedTime: new Date().toISOString(),
-    lastUpdatedBy: currentUserRole,
+    lastUpdatedBy: currentStaffName,
     notes: formData.notes,
     attachments: formData.attachments,
     checkedBy: null,

@@ -14,6 +14,7 @@ interface PatientModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUserRole: StaffRole;
+  currentStaffName: string;
   onUpdateTask: (taskId: string, updates: Partial<PatientTask>) => void;
   onDeleteTask: (taskId: string) => void;
   statusHistory: StatusHistory[];
@@ -25,12 +26,15 @@ export default function PatientModal({
   isOpen,
   onClose,
   currentUserRole,
+  currentStaffName,
   onUpdateTask,
   onDeleteTask,
   statusHistory,
   onUpdatePatientCode
 }: PatientModalProps) {
   const [mounted, setMounted] = useState(false);
+
+  console.log('【Modal Debug】Name:', currentStaffName, 'Role:', currentUserRole);
 
   const [notes, setNotes] = useState(task?.notes || '');
   const [rejectReason, setRejectReason] = useState(task?.rejectReason || '');
@@ -75,7 +79,7 @@ export default function PatientModal({
           ...pack,
           isCompleted: nextState,
           completedAt: nextState ? new Date().toISOString() : null,
-          completedBy: nextState ? currentUserRole : null
+          completedBy: nextState ? currentStaffName : null
         };
       }
       return pack;
@@ -85,7 +89,7 @@ export default function PatientModal({
     onUpdateTask(task.id, {
       packs: updatedPacks,
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     });
   };
 
@@ -98,7 +102,7 @@ export default function PatientModal({
     onUpdateTask(task.id, {
       packs: updatedPacks,
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     });
   };
 
@@ -134,7 +138,7 @@ export default function PatientModal({
     onUpdateTask(task.id, {
       packs: updatedPacks,
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     });
   };
 
@@ -147,7 +151,7 @@ export default function PatientModal({
     onUpdateTask(task.id, {
       packs: updatedPacks,
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     });
   };
 
@@ -156,7 +160,7 @@ export default function PatientModal({
     onUpdateTask(task.id, {
       [field]: !task[field],
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     });
   };
 
@@ -165,7 +169,7 @@ export default function PatientModal({
     const updates: Partial<PatientTask> = {
       notes,
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     };
 
     if (isRejected) {
@@ -188,7 +192,7 @@ export default function PatientModal({
     const updates: Partial<PatientTask> = {
       rejectReason: reason,
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     };
     onUpdateTask(task.id, updates);
   };
@@ -204,7 +208,7 @@ export default function PatientModal({
       onUpdateTask(task.id, {
         attachments: [...(task.attachments || []), downloadUrl],
         lastUpdatedTime: new Date().toISOString(),
-        lastUpdatedBy: currentUserRole
+        lastUpdatedBy: currentStaffName
       });
     } catch (error) {
       console.error('Image upload failed:', error);
@@ -220,7 +224,7 @@ export default function PatientModal({
     onUpdateTask(task.id, {
       attachments: newAttachments,
       lastUpdatedTime: new Date().toISOString(),
-      lastUpdatedBy: currentUserRole
+      lastUpdatedBy: currentStaffName
     });
   };
 
