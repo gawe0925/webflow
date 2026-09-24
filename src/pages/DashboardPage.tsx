@@ -36,36 +36,7 @@ import { useAuth } from '../context/AuthContext';
 
 const PAYMENT_COLUMNS: PaymentStatus[] = ['Unpaid', 'Paid'];
 
-const generateMockTasks = (): PatientTask[] => [
-  {
-    id: '1',
-    patientCode: 'M22',
-    currentStatus: 'TODO',
-    lastUpdatedTime: new Date(Date.now() - 3600000).toISOString(),
-    lastUpdatedBy: 'pharmacist',
-    notes: 'Patient requires morning medication only',
-    attachments: [],
-    rejectReason: undefined,
-    checkedBy: null,
-    checkedAt: null,
-    packs: [],
-    paymentRecordId: null
-  },
-  {
-    id: '2',
-    patientCode: 'S45',
-    currentStatus: 'Packing in Progress',
-    lastUpdatedTime: new Date(Date.now() - 7200000).toISOString(),
-    lastUpdatedBy: 'staff',
-    notes: 'Weekly pack preparation',
-    attachments: [],
-    rejectReason: undefined,
-    checkedBy: null,
-    checkedAt: null,
-    packs: [],
-    paymentRecordId: null
-  }
-];
+const generateMockTasks = (): PatientTask[] => [];
 
 export default function DashboardPage() {
   // 從 AuthContext 取出當前登入員工資訊
@@ -227,7 +198,7 @@ export default function DashboardPage() {
       const { updatedTask, newPaymentRecordId } = await updatePatientStatusInService(
         targetTask,
         newStatus as DispensaryStatus,
-        currentUserRole,
+        currentStaff?.name || 'Unknown Staff',
         verificationData,
         useLocalFallback
       );
@@ -254,7 +225,7 @@ export default function DashboardPage() {
       const newHistory: StatusHistory = {
         status: newStatus,
         timestamp: new Date().toISOString(),
-        updatedBy: currentUserRole
+        updatedBy: currentStaff?.name || 'Unknown Staff'
       };
       setStatusHistory(prev => ({
         ...prev,
@@ -283,7 +254,7 @@ export default function DashboardPage() {
       const { taskUpdates, updatedPaymentRecordId } = await updatePatientInService(
         taskId,
         updates,
-        currentUserRole,
+        currentStaff?.name || 'Unknown Staff',
         useLocalFallback,
         targetTask
       );
@@ -344,7 +315,10 @@ export default function DashboardPage() {
     }
 
     try {
-      const newTask = await addPatientToService(formData, currentUserRole, useLocalFallback);
+      const newTask = await addPatientToService(
+        formData, 
+        currentStaff?.name || 'Unknown Staff', 
+        useLocalFallback);
       if (useLocalFallback) {
         setTasks(prev => [...prev, newTask]);
       }
@@ -657,6 +631,7 @@ export default function DashboardPage() {
             isOpen={!!selectedTaskId}
             onClose={() => setSelectedTaskId(null)}
             currentUserRole={currentUserRole}
+            currentStaffName={currentStaff?.name || 'Unknown Staff'}
             onUpdateTask={handleUpdateTask}
             onDeleteTask={handleDeleteTask}
             statusHistory={selectedTaskId ? statusHistory[selectedTaskId] || [] : []}
