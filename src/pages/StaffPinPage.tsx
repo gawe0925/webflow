@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/pages/StaffPinPage.tsx
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserCheck, KeyRound, LogOut, AlertCircle, Users, UserPlus } from 'lucide-react';
 import CreateStaffModal from '../components/CreateStaffModal';
@@ -10,6 +11,8 @@ export default function StaffPinPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCreateStaffModalOpen, setIsCreateStaffModalOpen] = useState(false);
+
+  const pinInputRef = useRef<HTMLInputElement>(null);
 
   // 嚴格檢查是否為 Admin 帳號 (信箱為 admin@gmail.com 或指定的 UID)
   const isAdminUser = 
@@ -36,6 +39,10 @@ export default function StaffPinPage() {
   const handleQuickSelect = (code: string) => {
     setStaffCode(code);
     setError(null);
+    // 自動 focus 到 PIN 輸入框
+    if (pinInputRef.current) {
+      pinInputRef.current.focus();
+    }
   };
 
   return (
@@ -86,21 +93,20 @@ export default function StaffPinPage() {
               <Users className="w-3.5 h-3.5" /> Active Staff List
             </label>
             <div className="flex flex-wrap gap-2">
-              {staffList
-                .map(staff => (
-                  <button
-                    key={staff.id}
-                    type="button"
-                    onClick={() => handleQuickSelect(staff.staffCode)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                      staffCode.toLowerCase() === staff.staffCode.toLowerCase()
-                        ? 'bg-white text-slate-900 border-white shadow-sm'
-                        : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
-                    }`}
-                  >
-                    {staff.name} ({staff.staffCode})
-                  </button>
-                ))}
+              {staffList.map(staff => (
+                <button
+                  key={staff.id}
+                  type="button"
+                  onClick={() => handleQuickSelect(staff.staffCode)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    staffCode.toLowerCase() === staff.staffCode.toLowerCase()
+                      ? 'bg-white text-slate-900 border-white shadow-sm'
+                      : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+                  }`}
+                >
+                  {staff.name} ({staff.staffCode})
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -128,9 +134,10 @@ export default function StaffPinPage() {
             <div className="relative">
               <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
+                ref={pinInputRef}
                 type="password"
                 required
-                maxLength={6}
+                maxLength={8}
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 placeholder="••••"

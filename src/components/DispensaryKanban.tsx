@@ -1,3 +1,4 @@
+// src/components/DispensaryKanban.tsx
 import React from 'react';
 import { PatientTask, DispensaryStatus } from '../types';
 import { StaffRole } from '../types/auth';
@@ -31,6 +32,7 @@ export default function DispensaryKanban({
   searchQuery,
   visibleStatuses
 }: DispensaryKanbanProps) {
+  // 過濾搜尋條件 (Patient Code 或關鍵字)
   const filteredTasks = tasks.filter(task => 
     task.patientCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -96,21 +98,11 @@ export default function DispensaryKanban({
 
             {/* Task Cards Container */}
             <div 
-              className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-0.5"
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-              }}
+              className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-0.5 scrollbar-none"
             >
-              <style>{`
-                div::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style>
-
               {columnTasks.map(task => {
                 const isSelected = selectedTaskIds.includes(task.id);
-                // 異態禁用判斷
+                // 異態禁用判斷：已選取其他狀態的卡片時，停用目前卡片的勾選
                 const isDisabled = Boolean(
                   selectedTaskStatus && selectedTaskStatus !== task.currentStatus
                 );

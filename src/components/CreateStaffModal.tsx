@@ -1,7 +1,8 @@
+// src/components/CreateStaffModal.tsx
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { StaffRole } from '../types/auth';
-import { X, UserPlus } from 'lucide-react';
+import { X, UserPlus, Store, CreditCard } from 'lucide-react';
 
 interface CreateStaffModalProps {
     isOpen: boolean;
@@ -15,6 +16,11 @@ export default function CreateStaffModal({ isOpen, onClose }: CreateStaffModalPr
     const [staffCode, setStaffCode] = useState('');
     const [pin, setPin] = useState('');
     const [role, setRole] = useState<StaffRole>('dispenser');
+
+    // 📌 看板存取權限 State
+    const [canAccessDispensary, setCanAccessDispensary] = useState<boolean>(true);
+    const [canAccessCounter, setCanAccessCounter] = useState<boolean>(true);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -34,16 +40,14 @@ export default function CreateStaffModal({ isOpen, onClose }: CreateStaffModalPr
         try {
             setLoading(true);
 
-            const isPharmacyStaff = ['admin', 'manager', 'pharmacist', 'dispenser'].includes(role);
-
             await createStaff({
                 staffCode: staffCode.trim(),
                 name: name.trim(),
                 pin: pin.trim(),
                 pinHash: pin.trim(),
                 role: role,
-                canAccessCounter: true,
-                canAccessDispensary: isPharmacyStaff
+                canAccessCounter: canAccessCounter,
+                canAccessDispensary: canAccessDispensary
             });
 
             setSuccessMsg(`Successfully created staff: ${name}`);
@@ -51,6 +55,8 @@ export default function CreateStaffModal({ isOpen, onClose }: CreateStaffModalPr
             setStaffCode('');
             setPin('');
             setRole('dispenser');
+            setCanAccessDispensary(true);
+            setCanAccessCounter(true);
 
             setTimeout(() => {
                 onClose();
@@ -139,7 +145,15 @@ export default function CreateStaffModal({ isOpen, onClose }: CreateStaffModalPr
                         <select
                             className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer"
                             value={role}
-                            onChange={(e) => setRole(e.target.value as StaffRole)}
+                            onChange={(e) => {
+                                const newRole = e.target.value as StaffRole;
+                                setRole(newRole);
+
+                                // 自動連動看板預設權限
+                                const isPharmacyStaff = ['admin', 'manager', 'pharmacist', 'dispenser'].includes(newRole);
+                                setCanAccessDispensary(isPharmacyStaff);
+                                setCanAccessCounter(true);
+                            }}
                         >
                             <option value="retail assistant">Retail Assistant</option>
                             <option value="dispenser">Dispenser</option>
@@ -147,6 +161,40 @@ export default function CreateStaffModal({ isOpen, onClose }: CreateStaffModalPr
                             <option value="manager">Manager</option>
                             <option value="admin">Admin</option>
                         </select>
+                    </div>
+
+                    {/* 📌 看板存取權限勾選區塊 */}
+                    <div className="pt-2 border-t border-slate-700/60">
+                        <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
+                            Station Access Permissions
+                        </label>
+                        <div className="space-y-2 bg-slate-900/60 p-3 rounded-lg border border-slate-700">
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <div className="flex items-center gap-2">
+                                    <Store className="w-4 h-4 text-emerald-400" />
+                                    <span className="text-xs font-medium text-slate-200">Dispensary Station</span>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={canAccessDispensary}
+                                    onChange={(e) => setCanAccessDispensary(e.target.checked)}
+                                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-800 border-slate-600 cursor-pointer"
+                                />
+                            </label>
+
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <div className="flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4 text-blue-400" />
+                                    <span className="text-xs font-medium text-slate-200">Counter Station</span>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={canAccessCounter}
+                                    onChange={(e) => setCanAccessCounter(e.target.checked)}
+                                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-800 border-slate-600 cursor-pointer"
+                                />
+                            </label>
+                        </div>
                     </div>
 
                     <div className="pt-2 flex gap-3">

@@ -1,3 +1,4 @@
+// src/components/KanbanBoard.tsx
 import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { PatientTask, WebsterPakStatus, ROLE_PERMISSIONS } from '../types';
@@ -25,6 +26,7 @@ export default function KanbanBoard({
   visibleStatuses,
   availableColumns
 }: KanbanBoardProps) {
+  // 依據 availableColumns 初始化狀態欄位數據
   const [columns, setColumns] = useState<Record<string, PatientTask[]>>(() => {
     return availableColumns.reduce((acc, status) => {
       acc[status] = tasks.filter(task => (task.currentStatus || (task as any).paymentStatus) === status);
@@ -32,6 +34,7 @@ export default function KanbanBoard({
     }, {} as Record<string, PatientTask[]>);
   });
 
+  // 當外部傳入的 tasks 或 availableColumns 發生變化時，同步更新 State
   useEffect(() => {
     const updatedColumns = availableColumns.reduce((acc, status) => {
       acc[status] = tasks.filter(task => (task.currentStatus || (task as any).paymentStatus) === status);
@@ -44,8 +47,10 @@ export default function KanbanBoard({
   // 如果 ROLE_PERMISSIONS 中有對應 key，取對應權限，否則提供預設值
   const permissions = ROLE_PERMISSIONS[currentUserRole as keyof typeof ROLE_PERMISSIONS] || { canSignOffReady: false };
 
+  // 僅渲染目前可見的欄位
   const visibleColumns = availableColumns.filter(status => visibleStatuses.includes(status));
 
+  // 搜尋過濾邏輯
   const getFilteredTasks = (status: string) => {
     const statusTasks = columns[status] || [];
     if (searchQuery.trim()) {
@@ -56,6 +61,7 @@ export default function KanbanBoard({
     return statusTasks;
   };
 
+  // 拖拽結束處理流程
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
     if (!destination) return;
@@ -63,11 +69,13 @@ export default function KanbanBoard({
     const sourceColumn = source.droppableId;
     const destinationColumn = destination.droppableId;
 
+    // 權限防禦：拖拽至 Ready for Collection 需要具備 Pharmacist / Sign-off 權限
     if (destinationColumn === 'Ready for Collection' && !permissions.canSignOffReady) {
       onShowToast('Access Denied: Only a Pharmacist can sign off and check the Webster-pak.', 'error');
       return;
     }
 
+    // 同欄位排序變更
     if (sourceColumn === destinationColumn) {
       const newTasks = [...(columns[sourceColumn] || [])];
       const [reorderedTask] = newTasks.splice(source.index, 1);
@@ -75,6 +83,7 @@ export default function KanbanBoard({
 
       setColumns({ ...columns, [sourceColumn]: newTasks });
     } else {
+      // 跨欄位狀態轉移
       const sourceTasks = [...(columns[sourceColumn] || [])];
       const destTasks = [...(columns[destinationColumn] || [])];
 
@@ -87,6 +96,7 @@ export default function KanbanBoard({
         [destinationColumn]: destTasks
       });
 
+      // 判斷是否帶入簽核/驗收資訊
       let verificationData;
       if (destinationColumn === 'Ready for Collection' && permissions.canSignOffReady) {
         verificationData = {
@@ -130,13 +140,14 @@ export default function KanbanBoard({
   return (
     <div className="h-full flex flex-col">
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 h-full">
           {visibleColumns.map((status) => {
             const filteredTasks = getFilteredTasks(status);
             return (
-              <div key={status} className="flex-shrink-0 w-80">
+              <div key={status} className="flex-shrink-0 w-80 h-full">
                 <div className={`${getColumnColor(status)} rounded-lg border border-gray-200 flex flex-col h-full`}>
-                  <div className={`${getColumnHeaderColor(status)} p-3 rounded-t-lg border-b border-gray-200`}>
+                  {/* Column Header */}
+                  <div className={`${getColumnHeaderColor(status)} p-3 rounded-t-lg border-b border-gray-200 flex-shrink-0`}>
                     <h3 className="font-semibold text-gray-800 flex items-center justify-between">
                       {status}
                       <span className="bg-white px-2 py-1 rounded-full text-xs font-medium text-gray-600">
@@ -145,13 +156,14 @@ export default function KanbanBoard({
                     </h3>
                   </div>
 
+                  {/* Column Droppable Body */}
                   <Droppable droppableId={status}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`p-3 flex-1 overflow-y-auto min-h-[200px] space-y-3 ${
-                          snapshot.isDraggingOver ? 'bg-blue-50' : ''
+                        className={`p-3 flex-1 overflow-y-auto min-h-[200px] space-y-3 transition-colors ${
+                          snapshot.isDraggingOver ? 'bg-blue-50/80' : ''
                         }`}
                       >
                         {filteredTasks.length === 0 ? (
