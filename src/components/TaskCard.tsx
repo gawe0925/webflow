@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/TaskCard.tsx
+import React, { useState, useEffect } from 'react';
 import { PatientTask, WebsterPakStatus } from '../types';
 import { StaffRole } from '../types/auth';
 import { 
@@ -37,6 +38,10 @@ const STATUS_CONFIG: Partial<Record<WebsterPakStatus, { label: string; icon: Rea
     label: 'Rejected',
     icon: <AlertCircle className="w-3.5 h-3.5 text-red-600" />
   },
+  'Ready for Documents': {
+    label: 'Ready Docs',
+    icon: <FileText className="w-3.5 h-3.5 text-blue-600" />
+  },
   'Ready for Collection': {
     label: 'Ready',
     icon: <CheckCircle2 className="w-3.5 h-3.5 text-zinc-700" />
@@ -71,6 +76,12 @@ export default function TaskCard({
   const [isEditingReason, setIsEditingReason] = useState(!task.rejectReason);
 
   const isPharmacist = currentUserRole === 'pharmacist';
+
+  // 當外部傳入的 task.rejectReason 改變時同步更新內部狀態
+  useEffect(() => {
+    setRejectReasonText(task.rejectReason || '');
+    setIsEditingReason(!task.rejectReason);
+  }, [task.rejectReason]);
 
   const currentConfig = STATUS_CONFIG[task.currentStatus as WebsterPakStatus] || {
     label: task.currentStatus,
@@ -115,7 +126,7 @@ export default function TaskCard({
     }
   };
 
-  // 檢查是否有任何需要顯示的關鍵 Badge
+  // 檢查是否有任何需要顯示的 Processing / Billing Badges
   const hasBadges = task.isAccountPayment || task.hasWebsterPakFee || task.hasInvoice || task.hasScriptReminder;
 
   return (
@@ -175,7 +186,7 @@ export default function TaskCard({
         </div>
       </div>
 
-      {/* 📌 新增：Processing & Billing Option Badges */}
+      {/* Processing & Billing Option Badges */}
       {hasBadges && (
         <div className="flex flex-wrap items-center gap-1 mb-2">
           {task.isAccountPayment && (

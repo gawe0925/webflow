@@ -32,7 +32,7 @@ const CounterKanban: React.FC<CounterKanbanProps> = ({
   searchQuery,
   visibleStatuses
 }) => {
-  const filteredTasks = tasks.filter(task => 
+  const filteredTasks = tasks.filter(task =>
     task.patientCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -42,8 +42,8 @@ const CounterKanban: React.FC<CounterKanbanProps> = ({
         const columnTasks = filteredTasks.filter(t => t.currentStatus === status);
 
         return (
-          <div 
-            key={status} 
+          <div
+            key={status}
             /* 📌 高度設為 h-full 配合父層 flex-1 min-h-0 */
             className="flex flex-col bg-zinc-100/50 p-3.5 rounded-2xl border border-zinc-200/70 h-full min-h-0"
           >
@@ -58,7 +58,7 @@ const CounterKanban: React.FC<CounterKanbanProps> = ({
             </div>
 
             {/* Task List (獨立滾動區域) */}
-            <div 
+            <div
               className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-0.5"
               style={{
                 scrollbarWidth: 'none',
@@ -81,11 +81,10 @@ const CounterKanban: React.FC<CounterKanbanProps> = ({
                     <span className="text-base font-semibold tracking-tight text-zinc-900 group-hover:text-black">
                       {task.patientCode}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
-                      task.currentStatus === 'Paid' 
-                        ? 'bg-zinc-100 text-zinc-800 border-zinc-300' 
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${task.currentStatus === 'Paid'
+                        ? 'bg-zinc-100 text-zinc-800 border-zinc-300'
                         : 'bg-amber-50/80 text-amber-700 border-amber-200/80'
-                    }`}>
+                      }`}>
                       {task.currentStatus}
                     </span>
                   </div>

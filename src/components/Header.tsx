@@ -1,3 +1,4 @@
+// src/components/Header.tsx
 import { useAuth } from '../context/AuthContext';
 import { LogOut, User, ShieldCheck, UserCheck, Users } from 'lucide-react';
 
@@ -110,7 +111,7 @@ export default function Header({ useLocalFallback = false, onOpenStaffManagement
               <button
                 onClick={handleLogout}
                 title="Switch Staff / Duty Logout"
-                className="text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 border border-slate-200 flex items-center gap-1.5 cursor-pointer"
+                className="text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-center gap-1.5 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Logout</span>

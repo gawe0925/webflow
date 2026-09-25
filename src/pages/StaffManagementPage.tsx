@@ -1,7 +1,8 @@
+// src/pages/StaffManagementPage.tsx
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { StaffMember, StaffRole } from '../types/auth';
-import { Users, UserPlus, Shield, Edit2, Trash2, ArrowLeft, X } from 'lucide-react';
+import { Users, UserPlus, Shield, Edit2, Trash2, ArrowLeft, X, Store, CreditCard } from 'lucide-react';
 import CreateStaffModal from '../components/CreateStaffModal';
 import { getFirestore, doc, updateDoc, deleteDoc, collection, getDocs, query } from 'firebase/firestore';
 
@@ -166,49 +167,75 @@ export default function StaffManagementPage({ onBack }: StaffManagementPageProps
                 <th className="py-3 px-4 font-semibold">Staff Code</th>
                 <th className="py-3 px-4 font-semibold">Name</th>
                 <th className="py-3 px-4 font-semibold">Role Permission</th>
+                <th className="py-3 px-4 font-semibold">Access Stations</th>
                 <th className="py-3 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700 text-sm">
               {filteredStaffList && filteredStaffList.length > 0 ? (
-                filteredStaffList.map((staff) => (
-                  <tr key={staff.id} className="hover:bg-slate-700/40 transition">
-                    <td className="py-3 px-4 font-mono font-medium text-blue-300">
-                      {staff.staffCode}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-white">
-                      {staff.name}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900 border border-slate-700 text-slate-300">
-                        <Shield className="w-3 h-3 text-blue-400" />
-                        {roleDisplayNames[staff.role] || staff.role}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right space-x-2">
-                      {/* 編輯按鈕 */}
-                      <button
-                        onClick={() => handleOpenEdit(staff)}
-                        className="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition cursor-pointer"
-                        title="Edit Staff"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                filteredStaffList.map((staff) => {
+                  const isPharmacyStaff = ['admin', 'manager', 'pharmacist', 'dispenser'].includes(staff.role);
+                  const hasDispensary = staff.canAccessDispensary ?? isPharmacyStaff;
+                  const hasCounter = staff.canAccessCounter ?? true;
 
-                      {/* 刪除按鈕 */}
-                      <button
-                        onClick={() => handleDeleteStaff(staff.id, staff.name)}
-                        className="p-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded-lg transition border border-red-500/30 cursor-pointer"
-                        title="Delete Staff"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                  return (
+                    <tr key={staff.id} className="hover:bg-slate-700/40 transition">
+                      <td className="py-3 px-4 font-mono font-medium text-blue-300">
+                        {staff.staffCode}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-white">
+                        {staff.name}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900 border border-slate-700 text-slate-300">
+                          <Shield className="w-3 h-3 text-blue-400" />
+                          {roleDisplayNames[staff.role] || staff.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          {hasDispensary && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                              <Store className="w-3 h-3" />
+                              Dispensary
+                            </span>
+                          )}
+                          {hasCounter && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                              <CreditCard className="w-3 h-3" />
+                              Counter
+                            </span>
+                          )}
+                          {!hasDispensary && !hasCounter && (
+                            <span className="text-xs text-slate-500 italic">No Access</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right space-x-2">
+                        {/* 編輯按鈕 */}
+                        <button
+                          onClick={() => handleOpenEdit(staff)}
+                          className="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition cursor-pointer"
+                          title="Edit Staff"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+
+                        {/* 刪除按鈕 */}
+                        <button
+                          onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                          className="p-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded-lg transition border border-red-500/30 cursor-pointer"
+                          title="Delete Staff"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-500 text-xs">
+                  <td colSpan={5} className="py-8 text-center text-slate-500 text-xs">
                     No staff accounts found.
                   </td>
                 </tr>
@@ -286,7 +313,7 @@ export default function StaffManagementPage({ onBack }: StaffManagementPageProps
                     // 判斷是否為主要配藥/管理人員
                     const isPharmacyStaff = ['admin', 'manager', 'pharmacist', 'dispenser'].includes(newRole);
 
-                    // 自動連動看板存取權限
+                    // 自動連動預設看板存取權限
                     setEditCanAccessDispensary(isPharmacyStaff);
                     setEditCanAccessCounter(true);
                   }}
@@ -297,6 +324,40 @@ export default function StaffManagementPage({ onBack }: StaffManagementPageProps
                   <option value="manager">Manager</option>
                   {currentStaff?.role === 'admin' && <option value="admin">Admin</option>}
                 </select>
+              </div>
+
+              {/* 📌 看板存取權限手動勾選設定 */}
+              <div className="pt-2 border-t border-slate-700/60">
+                <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
+                  Station Access Permissions
+                </label>
+                <div className="space-y-2 bg-slate-900/60 p-3 rounded-lg border border-slate-700">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <Store className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-medium text-slate-200">Dispensary Station</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={editCanAccessDispensary}
+                      onChange={(e) => setEditCanAccessDispensary(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-800 border-slate-600 cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-blue-400" />
+                      <span className="text-xs font-medium text-slate-200">Counter Station</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={editCanAccessCounter}
+                      onChange={(e) => setEditCanAccessCounter(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-800 border-slate-600 cursor-pointer"
+                    />
+                  </label>
+                </div>
               </div>
 
               <div className="pt-2 flex gap-3">

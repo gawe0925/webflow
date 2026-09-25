@@ -1,3 +1,4 @@
+// src/components/PatientModal.tsx
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { PatientTask, COMMON_REJECT_REASONS, StatusHistory, PackItem } from '../types';
@@ -33,8 +34,6 @@ export default function PatientModal({
   onUpdatePatientCode
 }: PatientModalProps) {
   const [mounted, setMounted] = useState(false);
-
-  console.log('【Modal Debug】Name:', currentStaffName, 'Role:', currentUserRole);
 
   const [notes, setNotes] = useState(task?.notes || '');
   const [rejectReason, setRejectReason] = useState(task?.rejectReason || '');
@@ -215,7 +214,7 @@ export default function PatientModal({
       alert('Failed to upload image. Please check your storage settings.');
     } finally {
       setIsUploading(false);
-      e.target.value = ''; // 重置 input
+      e.target.value = '';
     }
   };
 
@@ -236,23 +235,15 @@ export default function PatientModal({
       : date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  // 手機 QR 上傳連結 (預留給方案 B 的專屬 Mobile 拍照頁面)
   const mobileUploadUrl = `${window.location.origin}/upload/${task.id}`;
 
   return createPortal(
-    <div
-      className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-[99999] flex items-center justify-center p-4"
-    >
+    <div className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-[99999] flex items-center justify-center p-4">
       {/* 背景 Overlay */}
-      <div
-        className="absolute inset-0 z-0"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 z-0" onClick={onClose} />
 
       {/* Modal 懸浮卡片主體 */}
-      <div
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-200/80 relative z-10"
-      >
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-200/80 relative z-10">
 
         {/* Header */}
         <div className="bg-zinc-50/80 border-b border-zinc-200/80 p-5 rounded-t-2xl flex items-center justify-between shrink-0">
@@ -269,7 +260,7 @@ export default function PatientModal({
                 <button
                   type="button"
                   onClick={handleSavePatientCode}
-                  className="px-3 py-1 bg-zinc-900 text-white text-xs font-medium rounded-lg hover:bg-black transition-colors"
+                  className="px-3 py-1 bg-zinc-900 text-white text-xs font-medium rounded-lg hover:bg-black transition-colors cursor-pointer"
                 >
                   Save
                 </button>
@@ -279,7 +270,7 @@ export default function PatientModal({
                     setIsEditingCode(false);
                     setPatientCode(task.patientCode);
                   }}
-                  className="px-3 py-1 bg-zinc-100 text-zinc-700 text-xs font-medium rounded-lg hover:bg-zinc-200 transition-colors border border-zinc-200"
+                  className="px-3 py-1 bg-zinc-100 text-zinc-700 text-xs font-medium rounded-lg hover:bg-zinc-200 transition-colors border border-zinc-200 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -291,7 +282,7 @@ export default function PatientModal({
                   <button
                     type="button"
                     onClick={() => setIsEditingCode(true)}
-                    className="p-1 hover:bg-zinc-200/60 rounded-md transition-colors"
+                    className="p-1 hover:bg-zinc-200/60 rounded-md transition-colors cursor-pointer"
                     title="Edit Patient Code"
                   >
                     <Edit3 className="w-4 h-4 text-zinc-400" />
@@ -306,7 +297,7 @@ export default function PatientModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 hover:bg-zinc-200/60 rounded-full text-zinc-400 hover:text-zinc-600 transition-colors"
+            className="p-2 hover:bg-zinc-200/60 rounded-full text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -315,7 +306,7 @@ export default function PatientModal({
         {/* 內容區 */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 text-zinc-800">
 
-          {/* 📌 新增：Task Specific Options & Tick Boxes */}
+          {/* Processing & Billing Options */}
           <div className="bg-zinc-50/70 border border-zinc-200/80 rounded-xl p-4 space-y-3">
             <h3 className="text-sm font-semibold text-zinc-900 flex items-center gap-2">
               <CheckSquare className="w-4 h-4 text-zinc-700" />
@@ -323,14 +314,14 @@ export default function PatientModal({
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Account Payment (常態) */}
               <button
                 type="button"
                 onClick={() => handleToggleTickBox('isAccountPayment')}
-                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left ${task.isAccountPayment
+                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
+                  task.isAccountPayment
                     ? 'bg-amber-50 border-amber-300 text-amber-900'
                     : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                  }`}
+                }`}
               >
                 <CreditCard className={`w-4 h-4 ${task.isAccountPayment ? 'text-amber-600' : 'text-zinc-400'}`} />
                 <div className="flex-1">
@@ -340,14 +331,14 @@ export default function PatientModal({
                 {task.isAccountPayment ? <CheckSquare className="w-4 h-4 text-amber-600" /> : <Square className="w-4 h-4 text-zinc-300" />}
               </button>
 
-              {/* Webster Pak Fee (常態) */}
               <button
                 type="button"
                 onClick={() => handleToggleTickBox('hasWebsterPakFee')}
-                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left ${task.hasWebsterPakFee
+                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
+                  task.hasWebsterPakFee
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
                     : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                  }`}
+                }`}
               >
                 <DollarSign className={`w-4 h-4 ${task.hasWebsterPakFee ? 'text-emerald-600' : 'text-zinc-400'}`} />
                 <div className="flex-1">
@@ -357,15 +348,15 @@ export default function PatientModal({
                 {task.hasWebsterPakFee ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4 text-zinc-300" />}
               </button>
 
-              {/* Invoice (僅在 Ready for Documents 顯示) */}
               {isReadyForDocuments && (
                 <button
                   type="button"
                   onClick={() => handleToggleTickBox('hasInvoice')}
-                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left ${task.hasInvoice
+                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
+                    task.hasInvoice
                       ? 'bg-blue-50 border-blue-300 text-blue-900'
                       : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                    }`}
+                  }`}
                 >
                   <Receipt className={`w-4 h-4 ${task.hasInvoice ? 'text-blue-600' : 'text-zinc-400'}`} />
                   <div className="flex-1">
@@ -376,15 +367,15 @@ export default function PatientModal({
                 </button>
               )}
 
-              {/* Script Reminder (僅在 Ready for Documents 顯示) */}
               {isReadyForDocuments && (
                 <button
                   type="button"
                   onClick={() => handleToggleTickBox('hasScriptReminder')}
-                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left ${task.hasScriptReminder
+                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
+                    task.hasScriptReminder
                       ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
                       : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                    }`}
+                  }`}
                 >
                   <FileText className={`w-4 h-4 ${task.hasScriptReminder ? 'text-indigo-600' : 'text-zinc-400'}`} />
                   <div className="flex-1">
@@ -408,7 +399,7 @@ export default function PatientModal({
                 <button
                   type="button"
                   onClick={handleAddPackInModal}
-                  className="text-xs px-2.5 py-1 bg-zinc-900 text-white rounded-lg hover:bg-black transition-colors flex items-center gap-1 font-medium shadow-xs"
+                  className="text-xs px-2.5 py-1 bg-zinc-900 text-white rounded-lg hover:bg-black transition-colors flex items-center gap-1 font-medium shadow-xs cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add Pack
@@ -425,10 +416,11 @@ export default function PatientModal({
                 {localPacks.map((pack) => (
                   <div
                     key={pack.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${pack.isCompleted
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      pack.isCompleted
                         ? 'bg-zinc-100/80 border-zinc-300 text-zinc-900'
                         : 'bg-white border-zinc-200 text-zinc-800'
-                      }`}
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <button
@@ -469,7 +461,7 @@ export default function PatientModal({
                         <button
                           type="button"
                           onClick={() => handleRemovePackInModal(pack.id)}
-                          className="p-1 hover:bg-red-50 text-red-500 rounded-md transition-colors"
+                          className="p-1 hover:bg-red-50 text-red-500 rounded-md transition-colors cursor-pointer"
                           title="Delete Pack"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -520,7 +512,7 @@ export default function PatientModal({
                   <button
                     type="button"
                     onClick={handleSaveNotes}
-                    className="px-3 py-1.5 bg-zinc-900 text-white rounded-lg hover:bg-black transition-colors flex items-center gap-1.5 text-xs font-medium shadow-xs"
+                    className="px-3 py-1.5 bg-zinc-900 text-white rounded-lg hover:bg-black transition-colors flex items-center gap-1.5 text-xs font-medium shadow-xs cursor-pointer"
                   >
                     <Save className="w-3.5 h-3.5" />
                     Save Notes
@@ -531,7 +523,7 @@ export default function PatientModal({
                       setIsEditing(false);
                       setNotes(task.notes || '');
                     }}
-                    className="px-3 py-1.5 bg-zinc-100 text-zinc-700 rounded-lg hover:bg-zinc-200 transition-colors text-xs font-medium border border-zinc-200"
+                    className="px-3 py-1.5 bg-zinc-100 text-zinc-700 rounded-lg hover:bg-zinc-200 transition-colors text-xs font-medium border border-zinc-200 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -546,7 +538,7 @@ export default function PatientModal({
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
-                    className="text-xs text-zinc-700 hover:text-black flex items-center gap-1 font-medium underline underline-offset-2"
+                    className="text-xs text-zinc-700 hover:text-black flex items-center gap-1 font-medium underline underline-offset-2 cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                     Edit Notes
@@ -576,7 +568,7 @@ export default function PatientModal({
                           key={reason}
                           type="button"
                           onClick={() => handleQuickRejectReason(reason)}
-                          className="px-2.5 py-1 bg-white border border-zinc-200 rounded-full text-xs font-medium hover:bg-zinc-100 transition-colors text-zinc-700"
+                          className="px-2.5 py-1 bg-white border border-zinc-200 rounded-full text-xs font-medium hover:bg-zinc-100 transition-colors text-zinc-700 cursor-pointer"
                         >
                           {reason}
                         </button>
@@ -588,14 +580,13 @@ export default function PatientModal({
             </div>
           )}
 
-          {/* 📌 Attachments 圖片上傳區 */}
+          {/* Attachments & Photos */}
           <div>
             <h3 className="text-sm font-semibold text-zinc-900 mb-2.5 flex items-center gap-2">
               <ImageIcon className="w-4 h-4 text-zinc-500" />
               Attachments & Photos
             </h3>
 
-            {/* 圖片預覽網格 */}
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
               {(task.attachments || []).map((attachment, index) => (
                 <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100">
@@ -616,7 +607,7 @@ export default function PatientModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveAttachment(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-600/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 p-1 bg-red-600/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -624,7 +615,6 @@ export default function PatientModal({
                 </div>
               ))}
 
-              {/* 上傳按鈕卡片 */}
               {canEdit && (
                 <label className={`border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-colors aspect-square bg-zinc-50/50 hover:bg-zinc-100/50 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
                   {isUploading ? (
@@ -646,12 +636,11 @@ export default function PatientModal({
               )}
             </div>
 
-            {/* B 方案：手機拍照 QR Code 按鈕 */}
             {canEdit && (
               <button
                 type="button"
                 onClick={() => setShowQrModal(true)}
-                className="w-full py-2 px-3 border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 rounded-xl text-xs font-medium text-zinc-700 flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2 px-3 border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 rounded-xl text-xs font-medium text-zinc-700 flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <QrCode className="w-4 h-4 text-zinc-600" />
                 Scan QR to Take Photo with Mobile
@@ -691,7 +680,7 @@ export default function PatientModal({
                     onClose();
                   }
                 }}
-                className="px-3.5 py-2 bg-red-50 text-red-600 border border-red-200/60 rounded-xl hover:bg-red-100 transition-colors flex items-center gap-1.5 text-xs font-medium"
+                className="px-3.5 py-2 bg-red-50 text-red-600 border border-red-200/60 rounded-xl hover:bg-red-100 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete Patient
@@ -701,7 +690,7 @@ export default function PatientModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-zinc-100 text-zinc-700 border border-zinc-200/80 rounded-xl hover:bg-zinc-200/80 transition-colors text-xs font-medium"
+            className="px-4 py-2 bg-zinc-100 text-zinc-700 border border-zinc-200/80 rounded-xl hover:bg-zinc-200/80 transition-colors text-xs font-medium cursor-pointer"
           >
             Close
           </button>
@@ -709,13 +698,13 @@ export default function PatientModal({
 
       </div>
 
-      {/* 📌 QR Code 彈出視窗 */}
+      {/* QR Code Modal */}
       {showQrModal && (
         <div className="fixed inset-0 bg-black/60 z-[100000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 border border-zinc-200 shadow-2xl">
             <div className="flex justify-between items-center">
               <h4 className="text-sm font-bold text-zinc-900">Mobile Photo Upload</h4>
-              <button onClick={() => setShowQrModal(false)} className="text-zinc-400 hover:text-zinc-600">
+              <button onClick={() => setShowQrModal(false)} className="text-zinc-400 hover:text-zinc-600 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -733,7 +722,7 @@ export default function PatientModal({
 
             <button
               onClick={() => setShowQrModal(false)}
-              className="w-full py-2 bg-zinc-900 text-white rounded-xl text-xs font-medium hover:bg-black transition-colors"
+              className="w-full py-2 bg-zinc-900 text-white rounded-xl text-xs font-medium hover:bg-black transition-colors cursor-pointer"
             >
               Done
             </button>

@@ -1,6 +1,6 @@
+// src/pages/DashboardPage.tsx
 import { useState, useEffect } from 'react';
 import { StaffRole } from '../types/auth';
-import { ROLE_PERMISSIONS } from '../types'
 import {
   PatientTask,
   WebsterPakStatus,
@@ -33,6 +33,7 @@ import AIAssistantModal from '../components/AIAssistantModal';
 import { Plus, Search, Filter, X, Store, CreditCard, CheckSquare, ArrowRight } from 'lucide-react';
 import { isFirebaseInitialized } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { hasPermission } from '../utils/permissions';
 
 const PAYMENT_COLUMNS: PaymentStatus[] = ['Unpaid', 'Paid'];
 
@@ -43,16 +44,11 @@ export default function DashboardPage() {
   const { currentStaff } = useAuth();
 
   // 將登入員工角色自動同步至看板權限（系統最高權限 mapping）
-  const currentUserRole: StaffRole = (currentStaff?.role === 'admin' ? 'pharmacist' : currentStaff?.role) as StaffRole || 'retail assistant';
+  const currentUserRole: StaffRole = (currentStaff?.role as StaffRole) || 'retail assistant';
 
-  // 📌 從權限對照表中取得目前使用者的看板權限
-  const userPermissions = ROLE_PERMISSIONS[currentUserRole] || {
-    canAccessDispensary: false,
-    canAccessCounter: true
-  };
-
-  const showDispensary = userPermissions.canAccessDispensary;
-  const showCounter = userPermissions.canAccessCounter;
+  // 📌 改用 utils/permissions.ts 的 hasPermission Helper 檢查看板存取權限
+  const showDispensary = hasPermission(currentStaff, 'canAccessDispensary');
+  const showCounter = hasPermission(currentStaff, 'canAccessCounter');
 
   const [tasks, setTasks] = useState<PatientTask[]>([]);
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
@@ -92,10 +88,11 @@ export default function DashboardPage() {
     setSelectedTaskIds(allIdsInCol);
   };
 
-  // 可轉移的目標狀態列表（排除自身狀態，且防呆控制 Pharmacist 專屬權限）
+  // 可轉移的目標狀態列表（排除自身狀態，且防呆控制退單權限）
+  const canReject = hasPermission(currentStaff, 'canRejectTask');
   const availableTargetStatuses = DISPENSARY_COLUMNS.filter(status => {
     if (status === selectedTaskStatus) return false;
-    if (status === 'Rejected' && currentUserRole !== 'pharmacist') return false;
+    if (status === 'Rejected' && !canReject) return false;
     return true;
   });
 
@@ -334,7 +331,8 @@ export default function DashboardPage() {
     await handleUpdateTask(taskId, { patientCode: newCode });
   };
 
-  const canManagePatients = currentUserRole === 'pharmacist' || currentUserRole === 'manager' || currentUserRole === 'admin';
+  // 📌 使用 hasPermission 判斷是否有管理病患資料權限
+  const canManagePatients = hasPermission(currentStaff, 'canManagePatients');
 
   const handleShowToast = (message: string, type: ToastType) => {
     setToast({ message, type });
