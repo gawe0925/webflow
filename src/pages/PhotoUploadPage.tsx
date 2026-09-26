@@ -1,16 +1,41 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+// pages/PhotoUploadPage.tsx
+import React, { useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Upload, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react';
 
 export default function PhotoUploadPage() {
   const { taskId } = useParams<{ taskId: string }>();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTokenExpired, setIsTokenExpired] = useState(false);
 
-  // 壓縮圖片並轉換為 Base64 (維持在 300KB 以內以符合 Firestore 1MB 上限)
+  // 🔑 驗證 3 分鐘 Token 是否過期
+  useEffect(() => {
+    if (!token) {
+      setIsTokenExpired(true);
+      setError('Missing security token.');
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token));
+      if (Date.now() > payload.exp) {
+        setIsTokenExpired(true);
+        setError('Upload link/QR code has expired. Please scan a new one from the desktop screen.');
+      }
+    } catch (e) {
+      setIsTokenExpired(true);
+      setError('Invalid security token.');
+    }
+  }, [token]);
+
+  // 壓縮圖片並轉換為 Base64
   const compressAndConvertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -35,7 +60,6 @@ export default function PhotoUploadPage() {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
 
-          // 壓縮為 JPEG, 品質 0.6
           const base64 = canvas.toDataURL('image/jpeg', 0.6);
           resolve(base64);
         };
@@ -47,7 +71,7 @@ export default function PhotoUploadPage() {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !taskId) return;
+    if (!file || !taskId || isTokenExpired) return;
 
     setUploading(true);
     setError(null);
@@ -57,10 +81,8 @@ export default function PhotoUploadPage() {
         throw new Error('Firestore is not initialized.');
       }
 
-      // 1. 壓縮圖片為 Base64
       const base64Image = await compressAndConvertToBase64(file);
 
-      // 2. 存入 Firestore attachments 陣列欄位
       const patientRef = doc(db, 'patients', taskId);
       await updateDoc(patientRef, {
         attachments: arrayUnion(base64Image)
@@ -85,13 +107,23 @@ export default function PhotoUploadPage() {
           </p>
         </div>
 
-        {error && (
+        {/* ❌ Token 過期或錯誤提示 */}
+        {isTokenExpired ? (
+          <div className="p-6 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
+            <Clock className="w-10 h-10 text-amber-600 mx-auto" />
+            <h3 className="font-bold text-amber-900">Link Expired</h3>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              {error || 'This upload link has expired. Please refresh the QR code on the desktop app and scan again.'}
+            </p>
+          </div>
+        ) : error ? (
           <div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs flex items-center justify-center gap-2 text-left">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
-        )}
+        ) : null}
 
+        {/* 🟢 上傳成功 */}
         {success ? (
           <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
@@ -99,26 +131,29 @@ export default function PhotoUploadPage() {
             <p className="text-xs text-emerald-600">The attachment has been saved directly to the patient record.</p>
           </div>
         ) : (
-          <label className={`w-full py-4 px-6 rounded-xl font-semibold text-white shadow-md flex items-center justify-center gap-2 transition cursor-pointer ${uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 active:scale-95'}`}>
-            {uploading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Processing & Saving...</span>
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5" />
-                <span>Select or Take Photo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploading}
-                  onChange={handleFileChange}
-                />
-              </>
-            )}
-          </label>
+          !isTokenExpired && (
+            <label className={`w-full py-4 px-6 rounded-xl font-semibold text-white shadow-md flex items-center justify-center gap-2 transition cursor-pointer ${uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 active:scale-95'}`}>
+              {uploading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Processing & Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5" />
+                  <span>Select or Take Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment" // 👈 讓手機點擊時優先觸發後鏡頭拍照
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={handleFileChange}
+                  />
+                </>
+              )}
+            </label>
+          )
         )}
       </div>
     </div>

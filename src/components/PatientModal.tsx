@@ -7,7 +7,7 @@ import { uploadTaskImage } from '../services/patientService';
 import {
   X, Clock, User, FileText, AlertCircle, Save, Trash2, Plus, Edit3,
   CheckCircle, Package, CheckSquare, Square, Calendar, Upload,
-  QrCode, Loader2, DollarSign, Receipt, CreditCard, Image as ImageIcon
+  QrCode, Loader2, DollarSign, Receipt, CreditCard, Image as ImageIcon, RotateCw
 } from 'lucide-react';
 
 interface PatientModalProps {
@@ -47,6 +47,10 @@ export default function PatientModal({
   const [isUploading, setIsUploading] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
+  // 🔐 安全短效 Token 與倒數計時狀態 (預設 3 分鐘 = 180 秒)
+  const [uploadToken, setUploadToken] = useState<string>('');
+  const [timeLeft, setTimeLeft] = useState<number>(180);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -62,6 +66,37 @@ export default function PatientModal({
       setIsEditingCode(false);
     }
   }, [task]);
+
+  // 🔑 生成帶有 3 分鐘過期時間的臨時 Upload Token
+  const generateUploadToken = () => {
+    if (!task) return;
+    const expiresAt = Date.now() + 3 * 60 * 1000; // 3 分鐘後
+    // 將 taskId 與過期時間打包成 base64 token (未來可替換為後端簽名的 JWT)
+    const rawToken = btoa(JSON.stringify({ taskId: task.id, exp: expiresAt }));
+    setUploadToken(rawToken);
+    setTimeLeft(180);
+  };
+
+  // ⏱️ QR Code Modal 開啟時觸發倒數計時
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+
+    if (showQrModal) {
+      generateUploadToken();
+
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => clearInterval(timer);
+  }, [showQrModal]);
 
   if (!mounted || !task || !isOpen) return null;
 
@@ -235,7 +270,14 @@ export default function PatientModal({
       : date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const mobileUploadUrl = `${window.location.origin}/upload/${task.id}`;
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  // 攜帶短效 token 的網址
+  const mobileUploadUrl = `${window.location.origin}/upload/${task.id}?token=${uploadToken}`;
 
   return createPortal(
     <div className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-[99999] flex items-center justify-center p-4">
@@ -317,11 +359,10 @@ export default function PatientModal({
               <button
                 type="button"
                 onClick={() => handleToggleTickBox('isAccountPayment')}
-                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
-                  task.isAccountPayment
+                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${task.isAccountPayment
                     ? 'bg-amber-50 border-amber-300 text-amber-900'
                     : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                }`}
+                  }`}
               >
                 <CreditCard className={`w-4 h-4 ${task.isAccountPayment ? 'text-amber-600' : 'text-zinc-400'}`} />
                 <div className="flex-1">
@@ -334,11 +375,10 @@ export default function PatientModal({
               <button
                 type="button"
                 onClick={() => handleToggleTickBox('hasWebsterPakFee')}
-                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
-                  task.hasWebsterPakFee
+                className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${task.hasWebsterPakFee
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
                     : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                }`}
+                  }`}
               >
                 <DollarSign className={`w-4 h-4 ${task.hasWebsterPakFee ? 'text-emerald-600' : 'text-zinc-400'}`} />
                 <div className="flex-1">
@@ -352,11 +392,10 @@ export default function PatientModal({
                 <button
                   type="button"
                   onClick={() => handleToggleTickBox('hasInvoice')}
-                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
-                    task.hasInvoice
+                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${task.hasInvoice
                       ? 'bg-blue-50 border-blue-300 text-blue-900'
                       : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                  }`}
+                    }`}
                 >
                   <Receipt className={`w-4 h-4 ${task.hasInvoice ? 'text-blue-600' : 'text-zinc-400'}`} />
                   <div className="flex-1">
@@ -371,11 +410,10 @@ export default function PatientModal({
                 <button
                   type="button"
                   onClick={() => handleToggleTickBox('hasScriptReminder')}
-                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${
-                    task.hasScriptReminder
+                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs font-medium transition-colors text-left cursor-pointer ${task.hasScriptReminder
                       ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
                       : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100/50'
-                  }`}
+                    }`}
                 >
                   <FileText className={`w-4 h-4 ${task.hasScriptReminder ? 'text-indigo-600' : 'text-zinc-400'}`} />
                   <div className="flex-1">
@@ -416,11 +454,10 @@ export default function PatientModal({
                 {localPacks.map((pack) => (
                   <div
                     key={pack.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                      pack.isCompleted
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${pack.isCompleted
                         ? 'bg-zinc-100/80 border-zinc-300 text-zinc-900'
                         : 'bg-white border-zinc-200 text-zinc-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <button
@@ -698,7 +735,7 @@ export default function PatientModal({
 
       </div>
 
-      {/* QR Code Modal */}
+      {/* QR Code Modal (含 3 分鐘倒數與遮罩) */}
       {showQrModal && (
         <div className="fixed inset-0 bg-black/60 z-[100000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 border border-zinc-200 shadow-2xl">
@@ -708,17 +745,43 @@ export default function PatientModal({
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-zinc-500">Scan this code with your phone camera to quickly take and upload a photo for patient <strong className="text-zinc-800">{task.patientCode}</strong>.</p>
 
-            <div className="flex justify-center p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+            <p className="text-xs text-zinc-500">
+              Scan this code with your phone camera to upload a photo for patient <strong className="text-zinc-800">{task.patientCode}</strong>.
+            </p>
+
+            {/* QR Code 容器與過期時的遮罩 */}
+            <div className="relative flex justify-center p-3 bg-zinc-50 rounded-xl border border-zinc-100 overflow-hidden min-h-[196px] items-center">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mobileUploadUrl)}`}
                 alt="Upload QR Code"
-                className="w-44 h-44 rounded-lg"
+                className={`w-44 h-44 rounded-lg transition-all ${timeLeft === 0 ? 'blur-xs opacity-10' : ''}`}
               />
+
+              {timeLeft === 0 && (
+                <div className="absolute inset-0 bg-zinc-900/85 backdrop-blur-xs flex flex-col items-center justify-center gap-2 p-4 text-white">
+                  <AlertCircle className="w-6 h-6 text-amber-400" />
+                  <p className="text-xs font-semibold">QR Code Expired</p>
+                  <button
+                    onClick={generateUploadToken}
+                    className="px-3 py-1.5 bg-white text-zinc-900 text-xs font-semibold rounded-lg hover:bg-zinc-100 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                    Renew Code
+                  </button>
+                </div>
+              )}
             </div>
 
-            <p className="text-[11px] text-zinc-400 break-all font-mono">{mobileUploadUrl}</p>
+            {/* 時效倒數標籤 */}
+            <div className="flex items-center justify-center gap-1.5 text-xs font-medium">
+              <span className="text-zinc-500">Expires in:</span>
+              <span className={`font-mono font-bold ${timeLeft < 30 ? 'text-red-600 animate-pulse' : 'text-zinc-800'}`}>
+                {formatTimer(timeLeft)}
+              </span>
+            </div>
+
+            <p className="text-[10px] text-zinc-400 break-all font-mono line-clamp-2">{mobileUploadUrl}</p>
 
             <button
               onClick={() => setShowQrModal(false)}
