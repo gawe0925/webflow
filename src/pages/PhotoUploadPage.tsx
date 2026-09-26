@@ -2,9 +2,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import CryptoJS from 'crypto-js'; // 1. 引入 CryptoJS
 import { db } from '../firebase';
 import { verifySignedToken } from '../utils/security';
 import { Upload, CheckCircle2, Loader2, AlertCircle, ShieldAlert, RefreshCw } from 'lucide-react';
+
+// 從環境變數讀取金鑰
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY as string;
 
 interface PhotoUploadPageProps {
   taskId?: string;
@@ -104,11 +108,20 @@ export default function PhotoUploadPage({ taskId: propTaskId, rawToken: propRawT
         throw new Error('Firestore is not initialized.');
       }
 
+      if (!SECRET_KEY) {
+        throw new Error('Encryption key is missing in environment variables.');
+      }
+
+      // A. 將照片壓縮轉成 Base64
       const base64Image = await compressAndConvertToBase64(file);
 
+      // B. 2. 使用 AES-256 進行加密（將 Base64 轉成亂碼字串）
+      const encryptedImage = CryptoJS.AES.encrypt(base64Image, SECRET_KEY).toString();
+
+      // C. 3. 將「加密後的亂碼」寫入 Firestore
       const patientRef = doc(db, 'patients', taskId);
       await updateDoc(patientRef, {
-        attachments: arrayUnion(base64Image)
+        attachments: arrayUnion(encryptedImage)
       });
 
       setSuccess(true);
@@ -169,7 +182,7 @@ export default function PhotoUploadPage({ taskId: propTaskId, rawToken: propRawT
           <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
             <h3 className="font-bold text-emerald-800">Photo Uploaded Successfully!</h3>
-            <p className="text-xs text-emerald-600">The attachment has been saved directly to the patient record.</p>
+            <p className="text-xs text-emerald-600">The attachment has been encrypted and saved directly to the patient record.</p>
             <button
               onClick={() => setSuccess(false)}
               className="mt-2 px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition"
@@ -190,7 +203,7 @@ export default function PhotoUploadPage({ taskId: propTaskId, rawToken: propRawT
                 {uploading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Processing & Saving...</span>
+                    <span>Encrypting & Saving...</span>
                   </>
                 ) : (
                   <>
