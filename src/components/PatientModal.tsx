@@ -5,7 +5,6 @@ import CryptoJS from 'crypto-js'; // 1. 引入 CryptoJS
 import { PatientTask, COMMON_REJECT_REASONS, StatusHistory, PackItem } from '../types';
 import { StaffRole } from '../types/auth';
 import { generateSignedToken } from '../utils/security';
-import { uploadTaskImage } from '../services/patientService';
 import {
   X, Clock, User, FileText, AlertCircle, Save, Trash2, Plus, Edit3,
   CheckCircle, Package, CheckSquare, Square, Calendar, Upload,
