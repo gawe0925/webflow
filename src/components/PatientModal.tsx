@@ -48,9 +48,9 @@ export default function PatientModal({
   const [isUploading, setIsUploading] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
-  // 🔐 安全短效 Token 與倒數計時狀態 (預設 3 分鐘 = 180 秒)
+  // 🔐 安全短效 Token 與倒數計時狀態 (預設 5 分鐘 = 300 秒)
   const [uploadToken, setUploadToken] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState<number>(180);
+  const [timeLeft, setTimeLeft] = useState<number>(300);
 
   useEffect(() => {
     setMounted(true);
@@ -68,15 +68,15 @@ export default function PatientModal({
     }
   }, [task]);
 
-  // 🔑 生成帶有 3 分鐘過期時間的臨時 Upload Token
+  // 🔑 生成帶有 5 分鐘過期時間的臨時 Upload Token
   const generateUploadToken = () => {
     if (!task) return;
     
-    // 使用安全簽名工具生成 Token
-    const token = generateSignedToken(task.id, 3);
+    // 使用安全簽名工具生成 Token (預設 5 分鐘)
+    const token = generateSignedToken(task.id, 5);
     
     setUploadToken(token);
-    setTimeLeft(180);
+    setTimeLeft(300);
   };
 
   // ⏱️ QR Code Modal 開啟時觸發倒數計時
@@ -278,15 +278,13 @@ export default function PatientModal({
     return `${m}:${s}`;
   };
 
-  // 攜帶短效 token 的網址
+  // ⭐️ 攜帶短效 token 的網址（不要重複 encode）
   const mobileUploadUrl = `${window.location.origin}/upload/${task.id}?token=${uploadToken}`;
 
   return createPortal(
     <div className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-[99999] flex items-center justify-center p-4">
-      {/* 背景 Overlay */}
       <div className="absolute inset-0 z-0" onClick={onClose} />
 
-      {/* Modal 懸浮卡片主體 */}
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-200/80 relative z-10">
 
         {/* Header */}
@@ -600,7 +598,7 @@ export default function PatientModal({
                 </p>
                 {canEdit && (
                   <div>
-                    <p className="text-xs text-zinc-400 mb-2 font-medium">Quick select reasons:</p>
+                    <p className="text-xs text-zinc-400 mb-2 font-medium font-sans">Quick select reasons:</p>
                     <div className="flex flex-wrap gap-1.5">
                       {COMMON_REJECT_REASONS.filter(r => r !== 'Other').map(reason => (
                         <button
@@ -737,7 +735,7 @@ export default function PatientModal({
 
       </div>
 
-      {/* QR Code Modal (含 3 分鐘倒數與遮罩) */}
+      {/* QR Code Modal */}
       {showQrModal && (
         <div className="fixed inset-0 bg-black/60 z-[100000] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 border border-zinc-200 shadow-2xl">
@@ -752,8 +750,8 @@ export default function PatientModal({
               Scan this code with your phone camera to upload a photo for patient <strong className="text-zinc-800">{task.patientCode}</strong>.
             </p>
 
-            {/* QR Code 容器與過期時的遮罩 */}
             <div className="relative flex justify-center p-3 bg-zinc-50 rounded-xl border border-zinc-100 overflow-hidden min-h-[196px] items-center">
+              {/* ⭐️ 使用可直接帶入的標準 QR Code 生成 API */}
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mobileUploadUrl)}`}
                 alt="Upload QR Code"
@@ -775,7 +773,6 @@ export default function PatientModal({
               )}
             </div>
 
-            {/* 時效倒數標籤 */}
             <div className="flex items-center justify-center gap-1.5 text-xs font-medium">
               <span className="text-zinc-500">Expires in:</span>
               <span className={`font-mono font-bold ${timeLeft < 30 ? 'text-red-600 animate-pulse' : 'text-zinc-800'}`}>
