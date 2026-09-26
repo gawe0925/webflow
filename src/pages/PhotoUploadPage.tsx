@@ -1,24 +1,31 @@
-// pages/PhotoUploadPage.tsx
+// src/pages/PhotoUploadPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { verifySignedToken } from '../utils/security';
 import { Upload, CheckCircle2, Loader2, AlertCircle, ShieldAlert, RefreshCw } from 'lucide-react';
 
 interface PhotoUploadPageProps {
-  taskId: string;
-  rawToken: string;
+  taskId?: string;
+  rawToken?: string;
 }
 
-export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPageProps) {
+export default function PhotoUploadPage({ taskId: propTaskId, rawToken: propRawToken }: PhotoUploadPageProps = {}) {
+  // 兼顧 React Router 與 Direct Props 兩種傳入方式
+  const routeParams = useParams<{ taskId?: string }>();
+  const [searchParams] = useSearchParams();
+
+  const taskId = propTaskId || routeParams.taskId || '';
+  const rawToken = propRawToken || searchParams.get('token') || '';
+
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null); // null 代表初始化檢查中
+  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 🛡️ 每次傳入的 rawToken 或 taskId 變動時，重新進行驗證
   useEffect(() => {
     if (!rawToken) {
       setIsTokenValid(false);
@@ -32,7 +39,6 @@ export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPagePro
       return;
     }
 
-    // 將 rawToken 帶入驗證
     const result = verifySignedToken(rawToken);
 
     if (!result.valid) {
@@ -47,7 +53,6 @@ export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPagePro
     }
   }, [rawToken, taskId]);
 
-  // 壓縮圖片並轉換為 Base64
   const compressAndConvertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -81,7 +86,6 @@ export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPagePro
     });
   };
 
-  // 觸發原生檔案選擇/拍照元件
   const handleButtonClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -119,7 +123,6 @@ export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPagePro
     }
   };
 
-  // 畫面載入中狀態
   if (isTokenValid === null) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
@@ -138,7 +141,6 @@ export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPagePro
           </p>
         </div>
 
-        {/* ❌ 簽名無效、過期或經篡改提示 */}
         {!isTokenValid ? (
           <div className="p-6 bg-amber-50 rounded-xl border border-amber-200 space-y-4">
             <ShieldAlert className="w-10 h-10 text-amber-600 mx-auto" />
@@ -163,7 +165,6 @@ export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPagePro
           </div>
         ) : null}
 
-        {/* 🟢 上傳成功 */}
         {success ? (
           <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
