@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { PatientTask, COMMON_REJECT_REASONS, StatusHistory, PackItem } from '../types';
 import { StaffRole } from '../types/auth';
+import { generateSignedToken } from '../utils/security';
 import { uploadTaskImage } from '../services/patientService';
 import {
   X, Clock, User, FileText, AlertCircle, Save, Trash2, Plus, Edit3,
@@ -70,10 +71,11 @@ export default function PatientModal({
   // 🔑 生成帶有 3 分鐘過期時間的臨時 Upload Token
   const generateUploadToken = () => {
     if (!task) return;
-    const expiresAt = Date.now() + 3 * 60 * 1000; // 3 分鐘後
-    // 將 taskId 與過期時間打包成 base64 token (未來可替換為後端簽名的 JWT)
-    const rawToken = btoa(JSON.stringify({ taskId: task.id, exp: expiresAt }));
-    setUploadToken(rawToken);
+    
+    // 使用安全簽名工具生成 Token
+    const token = generateSignedToken(task.id, 3);
+    
+    setUploadToken(token);
     setTimeLeft(180);
   };
 
