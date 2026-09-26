@@ -1,6 +1,7 @@
 // src/utils/security.ts
 import CryptoJS from 'crypto-js';
 
+// ⚠️ 確保兩端讀取相同的預設 Key
 const APP_SECRET_KEY = import.meta.env.VITE_UPLOAD_SECRET_KEY || 'pharmacy-app-secure-upload-key-2026';
 
 export interface UploadPayload {
@@ -8,7 +9,7 @@ export interface UploadPayload {
   exp: number;
 }
 
-export function generateSignedToken(taskId: string, expiresInMinutes: number = 5): string { // 💡 建議將預設調為 5 分鐘
+export function generateSignedToken(taskId: string, expiresInMinutes: number = 5): string {
   const expiresAt = Date.now() + expiresInMinutes * 60 * 1000;
   const payload: UploadPayload = { taskId, exp: expiresAt };
 
@@ -17,7 +18,6 @@ export function generateSignedToken(taskId: string, expiresInMinutes: number = 5
   const signature = CryptoJS.HmacSHA256(encodedPayload, APP_SECRET_KEY).toString(CryptoJS.enc.Hex);
 
   const rawToken = `${encodedPayload}.${signature}`;
-  // ⭐️ 將 Token 做 encodeURIComponent，防止 QR Code URL 內的 + / = 字符破壞結構
   return encodeURIComponent(rawToken);
 }
 
@@ -27,35 +27,38 @@ export function verifySignedToken(token: string | null): { valid: boolean; taskI
   }
 
   try {
-    // ⭐️ 關鍵：先做 decodeURIComponent，並將可能被瀏覽器替換的空格還原為 +
-    const raw = decodeURIComponent(token).replace(/ /g, '+');
-    const parts = raw.split('.');
+    // ⭐️ 先還原被 URL 轉換的加號與轉義字元
+    const decodedToken = decodeURIComponent(token).replace(/ /g, '+');
+    const parts = decodedToken.split('.');
 
     if (parts.length !== 2) {
-      return { valid: false, reason: 'Invalid token structure.' };
+      return { valid: false, reason: `Invalid token structure (Parts: ${parts.length})` };
     }
 
     const [encodedPayload, providedSignature] = parts;
 
-    // 1. 重新計算 HMAC 簽名
+    // 重新計算 HMAC
     const expectedSignature = CryptoJS.HmacSHA256(encodedPayload, APP_SECRET_KEY).toString(CryptoJS.enc.Hex);
 
     if (providedSignature !== expectedSignature) {
-      return { valid: false, reason: 'Security check failed. Token signature mismatch!' };
+      return { 
+        valid: false, 
+        reason: `Signature mismatch! Recv: [${providedSignature.slice(0, 6)}...], Expected: [${expectedSignature.slice(0, 6)}...]` 
+      };
     }
 
-    // 2. 解碼 Payload
     const payloadStr = CryptoJS.enc.Base64.parse(encodedPayload).toString(CryptoJS.enc.Utf8);
     const payload: UploadPayload = JSON.parse(payloadStr);
 
-    // ⭐️ 3. 允許 30 秒的裝置時鐘誤差緩衝 (Clock Skew Buffer)
-    const CLOCK_BUFFER_MS = 30 * 1000;
+    // ⭐️ 允許 60 秒的裝置時鐘誤差緩衝
+    const CLOCK_BUFFER_MS = 60 * 1000;
     if (Date.now() > payload.exp + CLOCK_BUFFER_MS) {
-      return { valid: false, reason: 'Upload link has expired. Please rescan QR code.' };
+      const diffSec = Math.round((Date.now() - payload.exp) / 1000);
+      return { valid: false, reason: `Link expired ${diffSec}s ago.` };
     }
 
     return { valid: true, taskId: payload.taskId };
-  } catch (e) {
-    return { valid: false, reason: 'Failed to decode token.' };
+  } catch (e: any) {
+    return { valid: false, reason: `Decode Exception: ${e.message}` };
   }
 }

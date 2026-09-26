@@ -22,19 +22,20 @@ export default function PhotoUploadPage() {
   useEffect(() => {
     if (!rawToken) {
       setIsTokenValid(false);
-      setError('Missing security upload token.');
+      setError('Missing upload token in URL.');
       return;
     }
 
-    // ⭐️ 直接帶入 rawToken，解碼交由 security.ts 的修復邏輯處理
+    // 直接將 URL 上的 rawToken 帶入驗證
     const result = verifySignedToken(rawToken);
 
     if (!result.valid) {
       setIsTokenValid(false);
+      // 💡 顯示詳細的除錯原因
       setError(result.reason || 'Invalid or expired access token.');
     } else if (result.taskId !== taskId) {
       setIsTokenValid(false);
-      setError('Token does not match the requested patient record.');
+      setError(`Task ID Mismatch: URL is [${taskId}], Token is [${result.taskId}]`);
     } else {
       setIsTokenValid(true);
       setError(null);
