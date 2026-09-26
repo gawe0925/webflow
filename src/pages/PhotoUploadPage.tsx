@@ -26,9 +26,8 @@ export default function PhotoUploadPage() {
       return;
     }
 
-    // 處理 URL encode 情況，確保特殊字元被正確解析
-    const decodedToken = decodeURIComponent(rawToken);
-    const result = verifySignedToken(decodedToken);
+    // ⭐️ 直接帶入 rawToken，解碼交由 security.ts 的修復邏輯處理
+    const result = verifySignedToken(rawToken);
 
     if (!result.valid) {
       setIsTokenValid(false);
@@ -180,9 +179,8 @@ export default function PhotoUploadPage() {
                 type="button"
                 onClick={handleButtonClick}
                 disabled={uploading}
-                className={`w-full py-4 px-6 rounded-xl font-semibold text-white shadow-md flex items-center justify-center gap-2 transition cursor-pointer ${
-                  uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 active:scale-95'
-                }`}
+                className={`w-full py-4 px-6 rounded-xl font-semibold text-white shadow-md flex items-center justify-center gap-2 transition cursor-pointer ${uploading ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-900 active:scale-95'
+                  }`}
               >
                 {uploading ? (
                   <>
@@ -202,6 +200,7 @@ export default function PhotoUploadPage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                capture="environment" // 👈 新增：點擊時優先開啟手機後置相機
                 className="hidden"
                 onChange={handleFileChange}
               />
