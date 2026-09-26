@@ -1,15 +1,136 @@
 // src/components/PatientModal.tsx
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import CryptoJS from 'crypto-js'; // 1. 引入 CryptoJS
 import { PatientTask, COMMON_REJECT_REASONS, StatusHistory, PackItem } from '../types';
 import { StaffRole } from '../types/auth';
 import { generateSignedToken } from '../utils/security';
-import { uploadTaskImage } from '../services/patientService';
 import {
   X, Clock, User, FileText, AlertCircle, Save, Trash2, Plus, Edit3,
   CheckCircle, Package, CheckSquare, Square, Calendar, Upload,
-  QrCode, Loader2, DollarSign, Receipt, CreditCard, Image as ImageIcon, RotateCw
+  QrCode, Loader2, DollarSign, Receipt, CreditCard, Image as ImageIcon, RotateCw, ZoomIn
 } from 'lucide-react';
+
+// 從環境變數讀取金鑰
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY as string;
+
+// 🔒 專門用來解密 Base64 並顯示圖片的內部組件 (包含點擊放大預覽)
+function EncryptedImage({
+  encryptedSrc,
+  alt,
+  canEdit,
+  onRemove
+}: {
+  encryptedSrc: string;
+  alt: string;
+  canEdit: boolean;
+  onRemove: () => void;
+}) {
+  const [decryptedSrc, setDecryptedSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (!encryptedSrc) return;
+
+      // 相容舊資料：如果已經是 data:image/ 或 http 開頭（代表是舊的未加密圖片），直接顯示
+      if (encryptedSrc.startsWith('data:image') || encryptedSrc.startsWith('http')) {
+        setDecryptedSrc(encryptedSrc);
+        return;
+      }
+
+      // AES 解密
+      if (!SECRET_KEY) {
+        throw new Error('Encryption key missing');
+      }
+
+      const bytes = CryptoJS.AES.decrypt(encryptedSrc, SECRET_KEY);
+      const originalText = bytes.toString(CryptoJS.enc.Utf8);
+
+      if (!originalText) {
+        throw new Error('Decryption failed');
+      }
+
+      setDecryptedSrc(originalText);
+    } catch (err) {
+      console.error('Image decryption failed:', err);
+      setError(true);
+    }
+  }, [encryptedSrc]);
+
+  if (error) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 text-red-500 text-[10px] p-2 text-center rounded-xl border border-red-200">
+        <AlertCircle className="w-4 h-4 mb-1" />
+        <span>Decryption Error</span>
+      </div>
+    );
+  }
+
+  if (!decryptedSrc) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-zinc-100 rounded-xl">
+        <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100">
+        <img
+          src={decryptedSrc}
+          alt={alt}
+          className="w-full h-full object-cover"
+        />
+        {/* 點擊放大預覽遮罩 */}
+        <button
+          type="button"
+          onClick={() => setIsPreviewOpen(true)}
+          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium gap-1 cursor-pointer"
+        >
+          <ZoomIn className="w-4 h-4" />
+          <span>View</span>
+        </button>
+
+        {canEdit && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="absolute top-1 right-1 p-1 bg-red-600/90 hover:bg-red-700 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+
+      {/* 照片點擊放大彈窗 (Modal) */}
+      {isPreviewOpen && createPortal(
+        <div className="fixed inset-0 bg-black/80 z-[100001] flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(false)}
+              className="absolute -top-10 right-0 p-2 text-white/80 hover:text-white cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={decryptedSrc}
+              alt={alt}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 interface PatientModalProps {
   task: PatientTask | null;
@@ -233,22 +354,66 @@ export default function PatientModal({
     onUpdateTask(task.id, updates);
   };
 
-  // ---------------- 圖片上傳與刪除 ----------------
+  // ---------------- 圖片上傳 (電腦端) ----------------
+  const compressAndConvertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          const base64 = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(base64);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setIsUploading(true);
-      const downloadUrl = await uploadTaskImage(task.id, file);
+
+      if (!SECRET_KEY) {
+        throw new Error('Encryption key is missing in environment variables.');
+      }
+
+      // 1. 壓縮圖片
+      const base64Image = await compressAndConvertToBase64(file);
+
+      // 2. AES 加密
+      const encryptedImage = CryptoJS.AES.encrypt(base64Image, SECRET_KEY).toString();
+
+      // 3. 寫入資料庫
       onUpdateTask(task.id, {
-        attachments: [...(task.attachments || []), downloadUrl],
+        attachments: [...(task.attachments || []), encryptedImage],
         lastUpdatedTime: new Date().toISOString(),
         lastUpdatedBy: currentStaffName
       });
     } catch (error) {
       console.error('Image upload failed:', error);
-      alert('Failed to upload image. Please check your storage settings.');
+      alert('Failed to upload image. Please check encryption key or file size.');
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -626,30 +791,13 @@ export default function PatientModal({
 
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
               {(task.attachments || []).map((attachment, index) => (
-                <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100">
-                  <img
-                    src={attachment}
-                    alt={`Attachment ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  <a
-                    href={attachment}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-medium"
-                  >
-                    View
-                  </a>
-                  {canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveAttachment(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-600/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
+                <EncryptedImage
+                  key={index}
+                  encryptedSrc={attachment}
+                  alt={`Attachment ${index + 1}`}
+                  canEdit={canEdit}
+                  onRemove={() => handleRemoveAttachment(index)}
+                />
               ))}
 
               {canEdit && (
