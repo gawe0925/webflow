@@ -1,16 +1,16 @@
 // pages/PhotoUploadPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { verifySignedToken } from '../utils/security';
 import { Upload, CheckCircle2, Loader2, AlertCircle, ShieldAlert, RefreshCw } from 'lucide-react';
 
-export default function PhotoUploadPage() {
-  const { taskId } = useParams<{ taskId: string }>();
-  const [searchParams] = useSearchParams();
-  const rawToken = searchParams.get('token');
+interface PhotoUploadPageProps {
+  taskId: string;
+  rawToken: string;
+}
 
+export default function PhotoUploadPage({ taskId, rawToken }: PhotoUploadPageProps) {
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export default function PhotoUploadPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 🛡️ 每次網址上的 rawToken 或 taskId 變動（或重新整理）時，重新進行驗證
+  // 🛡️ 每次傳入的 rawToken 或 taskId 變動時，重新進行驗證
   useEffect(() => {
     if (!rawToken) {
       setIsTokenValid(false);
@@ -26,12 +26,17 @@ export default function PhotoUploadPage() {
       return;
     }
 
-    // 直接將 URL 上的 rawToken 帶入驗證
+    if (!taskId) {
+      setIsTokenValid(false);
+      setError('Missing Task ID in URL path.');
+      return;
+    }
+
+    // 將 rawToken 帶入驗證
     const result = verifySignedToken(rawToken);
 
     if (!result.valid) {
       setIsTokenValid(false);
-      // 💡 顯示詳細的除錯原因
       setError(result.reason || 'Invalid or expired access token.');
     } else if (result.taskId !== taskId) {
       setIsTokenValid(false);
@@ -108,7 +113,6 @@ export default function PhotoUploadPage() {
       setError(err?.message || 'Failed to upload photo. Please try again.');
     } finally {
       setUploading(false);
-      // 清空 input 值，讓使用者若選擇同一張照片也能重複觸發 onChange
       if (e.target) {
         e.target.value = '';
       }
@@ -140,7 +144,7 @@ export default function PhotoUploadPage() {
             <ShieldAlert className="w-10 h-10 text-amber-600 mx-auto" />
             <div>
               <h3 className="font-bold text-amber-900">Access Denied / Expired</h3>
-              <p className="text-xs text-amber-700 leading-relaxed mt-1">
+              <p className="text-xs text-amber-700 leading-relaxed mt-1 break-words font-mono">
                 {error}
               </p>
             </div>
@@ -175,7 +179,6 @@ export default function PhotoUploadPage() {
         ) : (
           isTokenValid && (
             <div>
-              {/* 採用按鈕主動觸發，解決手機 `<label>` 點擊沒反應的問題 */}
               <button
                 type="button"
                 onClick={handleButtonClick}
@@ -196,12 +199,11 @@ export default function PhotoUploadPage() {
                 )}
               </button>
 
-              {/* 隱藏的 input，支援一般上傳與相機拍照 */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment" // 👈 新增：點擊時優先開啟手機後置相機
+                capture="environment"
                 className="hidden"
                 onChange={handleFileChange}
               />
