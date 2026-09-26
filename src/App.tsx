@@ -2,9 +2,20 @@ import { useAuth } from './context/AuthContext';
 import FirebaseLoginPage from './pages/FirebaseLoginPage';
 import StaffPinPage from './pages/StaffPinPage';
 import DashboardPage from './pages/DashboardPage';
+import PhotoUploadPage from './pages/PhotoUploadPage'; // 👈 匯入你現有的 PhotoUploadPage[cite: 7]
 
 export default function App() {
   const { firebaseUser, isFirebaseLoading, currentStaff } = useAuth();
+
+  // 0. 特殊通道：判斷是否為手機掃碼上傳頁面 (免登入 Bypass)
+  const pathname = window.location.pathname;
+  const searchParams = new URLSearchParams(window.location.search);
+  const uploadToken = searchParams.get('token');
+
+  // 如果網址開頭是 /upload/ 且帶有 token 參數，直接進入 PhotoUploadPage[cite: 7]
+  if (pathname.startsWith('/upload/') && uploadToken) {
+    return <PhotoUploadPage />;
+  }
 
   // 1. 載入 Firestore / Auth 初始狀態中
   if (isFirebaseLoading) {
