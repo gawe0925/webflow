@@ -1,8 +1,9 @@
+// App.tsx
 import { useAuth } from './context/AuthContext';
 import FirebaseLoginPage from './pages/FirebaseLoginPage';
 import StaffPinPage from './pages/StaffPinPage';
 import DashboardPage from './pages/DashboardPage';
-import PhotoUploadPage from './pages/PhotoUploadPage'; // 👈 匯入你現有的 PhotoUploadPage[cite: 7]
+import PhotoUploadPage from './pages/PhotoUploadPage';
 
 export default function App() {
   const { firebaseUser, isFirebaseLoading, currentStaff } = useAuth();
@@ -12,9 +13,13 @@ export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const uploadToken = searchParams.get('token');
 
-  // 如果網址開頭是 /upload/ 且帶有 token 參數，直接進入 PhotoUploadPage[cite: 7]
-  if (pathname.startsWith('/upload/') && uploadToken) {
-    return <PhotoUploadPage />;
+  // 📌 從 `/upload/{taskId}` 網址中提取真正的 taskId
+  if (pathname.startsWith('/upload/')) {
+    const taskId = pathname.replace('/upload/', '').trim();
+
+    if (taskId && uploadToken) {
+      return <PhotoUploadPage taskId={taskId} rawToken={uploadToken} />;
+    }
   }
 
   // 1. 載入 Firestore / Auth 初始狀態中

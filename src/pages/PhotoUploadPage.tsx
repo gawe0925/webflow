@@ -1,4 +1,4 @@
-// pages/PhotoUploadPage.tsx
+// src/pages/PhotoUploadPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
@@ -6,19 +6,26 @@ import { db } from '../firebase';
 import { verifySignedToken } from '../utils/security';
 import { Upload, CheckCircle2, Loader2, AlertCircle, ShieldAlert, RefreshCw } from 'lucide-react';
 
-export default function PhotoUploadPage() {
-  const { taskId } = useParams<{ taskId: string }>();
+interface PhotoUploadPageProps {
+  taskId?: string;
+  rawToken?: string;
+}
+
+export default function PhotoUploadPage({ taskId: propTaskId, rawToken: propRawToken }: PhotoUploadPageProps = {}) {
+  // 兼顧 React Router 與 Direct Props 兩種傳入方式
+  const routeParams = useParams<{ taskId?: string }>();
   const [searchParams] = useSearchParams();
-  const rawToken = searchParams.get('token');
+
+  const taskId = propTaskId || routeParams.taskId || '';
+  const rawToken = propRawToken || searchParams.get('token') || '';
 
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null); // null 代表初始化檢查中
+  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 🛡️ 每次網址上的 rawToken 或 taskId 變動（或重新整理）時，重新進行驗證
   useEffect(() => {
     if (!rawToken) {
       setIsTokenValid(false);
@@ -26,12 +33,16 @@ export default function PhotoUploadPage() {
       return;
     }
 
-    // 直接將 URL 上的 rawToken 帶入驗證
+    if (!taskId) {
+      setIsTokenValid(false);
+      setError('Missing Task ID in URL path.');
+      return;
+    }
+
     const result = verifySignedToken(rawToken);
 
     if (!result.valid) {
       setIsTokenValid(false);
-      // 💡 顯示詳細的除錯原因
       setError(result.reason || 'Invalid or expired access token.');
     } else if (result.taskId !== taskId) {
       setIsTokenValid(false);
@@ -42,7 +53,6 @@ export default function PhotoUploadPage() {
     }
   }, [rawToken, taskId]);
 
-  // 壓縮圖片並轉換為 Base64
   const compressAndConvertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -76,7 +86,6 @@ export default function PhotoUploadPage() {
     });
   };
 
-  // 觸發原生檔案選擇/拍照元件
   const handleButtonClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -108,14 +117,12 @@ export default function PhotoUploadPage() {
       setError(err?.message || 'Failed to upload photo. Please try again.');
     } finally {
       setUploading(false);
-      // 清空 input 值，讓使用者若選擇同一張照片也能重複觸發 onChange
       if (e.target) {
         e.target.value = '';
       }
     }
   };
 
-  // 畫面載入中狀態
   if (isTokenValid === null) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
@@ -134,13 +141,12 @@ export default function PhotoUploadPage() {
           </p>
         </div>
 
-        {/* ❌ 簽名無效、過期或經篡改提示 */}
         {!isTokenValid ? (
           <div className="p-6 bg-amber-50 rounded-xl border border-amber-200 space-y-4">
             <ShieldAlert className="w-10 h-10 text-amber-600 mx-auto" />
             <div>
               <h3 className="font-bold text-amber-900">Access Denied / Expired</h3>
-              <p className="text-xs text-amber-700 leading-relaxed mt-1">
+              <p className="text-xs text-amber-700 leading-relaxed mt-1 break-words font-mono">
                 {error}
               </p>
             </div>
@@ -159,7 +165,6 @@ export default function PhotoUploadPage() {
           </div>
         ) : null}
 
-        {/* 🟢 上傳成功 */}
         {success ? (
           <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
@@ -175,7 +180,6 @@ export default function PhotoUploadPage() {
         ) : (
           isTokenValid && (
             <div>
-              {/* 採用按鈕主動觸發，解決手機 `<label>` 點擊沒反應的問題 */}
               <button
                 type="button"
                 onClick={handleButtonClick}
@@ -196,12 +200,11 @@ export default function PhotoUploadPage() {
                 )}
               </button>
 
-              {/* 隱藏的 input，支援一般上傳與相機拍照 */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment" // 👈 新增：點擊時優先開啟手機後置相機
+                capture="environment"
                 className="hidden"
                 onChange={handleFileChange}
               />
